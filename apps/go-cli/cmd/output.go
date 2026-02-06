@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	gm "github.com/slush-dev/garmin-messenger"
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,6 +28,37 @@ func formatLocation(loc *gm.UserLocation) string {
 		parts += fmt.Sprintf(", %vm", *loc.ElevationMeters)
 	}
 	return fmt.Sprintf("  [@ %s]", parts)
+}
+
+// hasMedia returns true if the media ID is non-nil and non-zero.
+func hasMedia(mediaID *uuid.UUID) bool {
+	return mediaID != nil && *mediaID != uuid.Nil
+}
+
+// formatMediaCmd returns a copy-pasteable download command for a media attachment.
+// Returns "" if mediaID is nil or zero.
+func formatMediaCmd(conversationID, messageID uuid.UUID, mediaID *uuid.UUID, mediaType *gm.MediaType) string {
+	if !hasMedia(mediaID) {
+		return ""
+	}
+	mt := ""
+	if mediaType != nil {
+		mt = string(*mediaType)
+	}
+	return fmt.Sprintf("garmin-messenger media %s %s --media-id %s --media-type %s",
+		conversationID, messageID, *mediaID, mt)
+}
+
+// mediaExtension returns the file extension (with dot) for a MediaType.
+func mediaExtension(mt gm.MediaType) string {
+	switch mt {
+	case gm.MediaTypeImageAvif:
+		return ".avif"
+	case gm.MediaTypeAudioOgg:
+		return ".ogg"
+	default:
+		return ".bin"
+	}
 }
 
 // printTable prints a simple formatted table header with separator.

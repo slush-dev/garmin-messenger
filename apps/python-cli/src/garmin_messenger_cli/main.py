@@ -112,6 +112,33 @@ def _format_location(loc: UserLocation | None) -> str:
     return f"  [@ {parts}]"
 
 
+def _has_media(media_id: UUID | None) -> bool:
+    """Return True if *media_id* is non-nil and non-zero."""
+    return media_id is not None and media_id != UUID(int=0)
+
+
+def _format_media_cmd(
+    conversation_id: str, message_id: UUID, media_id: UUID | None, media_type: MediaType | None,
+) -> str:
+    """Return a copy-pasteable download command, or '' if no media."""
+    if not _has_media(media_id):
+        return ""
+    mt = media_type.value if media_type else ""
+    return (
+        f"garmin-messenger media {conversation_id} {message_id}"
+        f" --media-id {media_id} --media-type {mt}"
+    )
+
+
+def _media_extension(media_type: MediaType | None) -> str:
+    """Return the file extension (with dot) for a MediaType."""
+    if media_type == MediaType.IMAGE_AVIF:
+        return ".avif"
+    if media_type == MediaType.AUDIO_OGG:
+        return ".ogg"
+    return ".bin"
+
+
 def _configure_logging(verbose: bool) -> None:
     """Set up console logging. DEBUG if verbose, else WARNING."""
     level = logging.DEBUG if verbose else logging.WARNING
@@ -332,6 +359,13 @@ def messages(ctx: click.Context, conversation_id: str, limit: int, show_uuid: bo
                 row["map_share_url"] = m.mapShareUrl
             if m.liveTrackUrl:
                 row["live_track_url"] = m.liveTrackUrl
+            if _has_media(m.mediaId):
+                if not show_uuid:
+                    row["message_id"] = m.messageId
+                row["conversation_id"] = conversation_id
+                row["media_id"] = m.mediaId
+                if m.mediaType:
+                    row["media_type"] = m.mediaType
             rows.append(row)
         _yaml_out(rows)
     else:
@@ -353,6 +387,9 @@ def messages(ctx: click.Context, conversation_id: str, limit: int, show_uuid: bo
                 click.echo(f"    MapShare: {m.mapShareUrl}")
             if m.liveTrackUrl:
                 click.echo(f"    LiveTrack: {m.liveTrackUrl}")
+            media_cmd = _format_media_cmd(conversation_id, m.messageId, m.mediaId, m.mediaType)
+            if media_cmd:
+                click.echo(f"    {media_cmd}")
 
 
 # ---------------------------------------------------------------------------
@@ -447,6 +484,92 @@ def send(
         click.echo(
             f"Sent! messageId={result.messageId} conversationId={result.conversationId}"
         )
+
+
+# ---------------------------------------------------------------------------
+# media
+# ---------------------------------------------------------------------------
+
+@cli.command()
+@click.argument("conversation_id")
+@click.argument("message_id")
+@click.option("--output", "-o", default=None, help="Output file path (default: {media_id}.{ext}).")
+@click.option("--media-id", default=None, help="Media ID (skip fetching message details).")
+@click.option("--media-type", default=None, help="Media type: ImageAvif or AudioOgg (skip fetching message details).")
+@_yaml_option
+@click.pass_context
+def media(
+    ctx: click.Context,
+    conversation_id: str,
+    message_id: str,
+    output: str | None,
+    media_id: str | None,
+    media_type: str | None,
+) -> None:
+    """Download a media attachment from a message.
+
+    If --media-id and --media-type are provided, skips fetching message details.
+    """
+    try:
+        conv_uuid = UUID(conversation_id)
+    except ValueError:
+        click.echo(f"Error: invalid conversation ID: {conversation_id}", err=True)
+        sys.exit(1)
+    try:
+        msg_uuid = UUID(message_id)
+    except ValueError:
+        click.echo(f"Error: invalid message ID: {message_id}", err=True)
+        sys.exit(1)
+
+    auth = _get_auth(ctx.obj["session_dir"])
+
+    with HermesAPI(auth) as api:
+        if media_id and media_type:
+            try:
+                m_id = UUID(media_id)
+            except ValueError:
+                click.echo(f"Error: invalid --media-id: {media_id}", err=True)
+                sys.exit(1)
+            m_type = MediaType(media_type)
+            dl_uuid = msg_uuid
+        else:
+            detail = api.get_conversation_detail(conversation_id)
+            found = False
+            for m in detail.messages:
+                if m.messageId == msg_uuid:
+                    if not _has_media(m.mediaId):
+                        click.echo(f"Error: message {message_id} has no media attachment", err=True)
+                        sys.exit(1)
+                    m_id = m.mediaId
+                    m_type = m.mediaType
+                    dl_uuid = m.uuid if m.uuid else m.messageId
+                    found = True
+                    break
+            if not found:
+                click.echo(
+                    f"Error: message {message_id} not found in conversation {conversation_id}",
+                    err=True,
+                )
+                sys.exit(1)
+
+        data = api.download_media(
+            uuid=dl_uuid,
+            media_type=m_type,
+            media_id=m_id,
+            message_id=msg_uuid,
+            conversation_id=conv_uuid,
+        )
+
+    if not output:
+        output = str(m_id) + _media_extension(m_type)
+
+    with open(output, "wb") as fh:
+        fh.write(data)
+
+    if ctx.obj["yaml"]:
+        _yaml_out({"file": output, "bytes": len(data), "media_type": m_type.value if m_type else ""})
+    else:
+        click.echo(f"Downloaded {len(data)} bytes → {output}")
 
 
 # ---------------------------------------------------------------------------
@@ -775,6 +898,23 @@ def listen(ctx: click.Context, show_uuid: bool) -> None:
                 row["map_share_url"] = msg.mapShareUrl
             if msg.liveTrackUrl:
                 row["live_track_url"] = msg.liveTrackUrl
+            if _has_media(msg.mediaId):
+                if not show_uuid:
+                    row["conversation_id"] = conv_id
+                    row["message_id"] = str(msg.messageId)
+                row["media_id"] = str(msg.mediaId)
+                if msg.mediaType:
+                    row["media_type"] = msg.mediaType
+                if msg.mediaMetadata:
+                    meta: dict = {}
+                    if msg.mediaMetadata.width is not None:
+                        meta["width"] = msg.mediaMetadata.width
+                    if msg.mediaMetadata.height is not None:
+                        meta["height"] = msg.mediaMetadata.height
+                    if msg.mediaMetadata.durationMs is not None:
+                        meta["duration_ms"] = msg.mediaMetadata.durationMs
+                    if meta:
+                        row["media_metadata"] = meta
             click.echo("---")
             _yaml_out(row)
         else:
@@ -790,6 +930,9 @@ def listen(ctx: click.Context, show_uuid: bool) -> None:
                 click.echo(f"   MapShare: {msg.mapShareUrl}")
             if msg.liveTrackUrl:
                 click.echo(f"   LiveTrack: {msg.liveTrackUrl}")
+            media_cmd = _format_media_cmd(conv_id, msg.messageId, msg.mediaId, msg.mediaType)
+            if media_cmd:
+                click.echo(f"   {media_cmd}")
         sr.mark_as_delivered(msg.messageId, msg.conversationId)
 
     def on_status(update: MessageStatusUpdate) -> None:

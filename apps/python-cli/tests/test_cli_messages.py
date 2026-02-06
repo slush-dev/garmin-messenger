@@ -8,12 +8,15 @@ from garmin_messenger.models import (
     ConversationDetailModel,
     ConversationMessageModel,
     ConversationMetaModel,
+    MediaType,
     UserLocation,
 )
 
 from garmin_messenger_cli.main import cli
 
 from .conftest import CONV_ID, MSG_ID, RECIPIENT_ID, USER_ID
+
+MEDIA_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
 class TestMessagesHappyPath:
@@ -341,6 +344,83 @@ class TestMessagesArgument:
         result = cli_runner.invoke(cli, ["messages"])
         assert result.exit_code == 2
         assert "CONVERSATION_ID" in result.stderr or "Missing argument" in result.stderr
+
+
+class TestMessagesMedia:
+    """Media attachment display in messages."""
+
+    def _detail_with_media(self, **msg_kwargs):
+        return ConversationDetailModel(
+            metaData=ConversationMetaModel(
+                conversationId=UUID(CONV_ID),
+                memberIds=[USER_ID],
+                updatedDate="2025-01-15T10:30:00Z",
+                createdDate="2025-01-01T00:00:00Z",
+            ),
+            messages=[
+                ConversationMessageModel(
+                    messageId=UUID(MSG_ID),
+                    messageBody="Photo",
+                    from_=USER_ID,
+                    sentAt="2025-01-15T10:30:00Z",
+                    **msg_kwargs,
+                )
+            ],
+            limit=50,
+        )
+
+    def test_media_cmd_shown_text(
+        self, cli_runner, mock_auth_class, mock_api_class
+    ):
+        detail = self._detail_with_media(
+            mediaId=UUID(MEDIA_ID), mediaType=MediaType.IMAGE_AVIF,
+        )
+        _, api = mock_api_class
+        api.get_conversation_detail.return_value = detail
+        result = cli_runner.invoke(cli, ["messages", CONV_ID])
+        assert "garmin-messenger media" in result.output
+        assert MEDIA_ID in result.output
+        assert "ImageAvif" in result.output
+
+    def test_no_media_no_cmd(
+        self, cli_runner, mock_auth_class, mock_api_class,
+        sample_conversation_detail_result,
+    ):
+        _, api = mock_api_class
+        api.get_conversation_detail.return_value = sample_conversation_detail_result
+        result = cli_runner.invoke(cli, ["messages", CONV_ID])
+        assert "garmin-messenger media" not in result.output
+
+    def test_media_yaml_includes_fields(
+        self, cli_runner, mock_auth_class, mock_api_class
+    ):
+        import yaml
+        detail = self._detail_with_media(
+            mediaId=UUID(MEDIA_ID), mediaType=MediaType.IMAGE_AVIF,
+        )
+        _, api = mock_api_class
+        api.get_conversation_detail.return_value = detail
+        result = cli_runner.invoke(cli, ["--yaml", "messages", CONV_ID])
+        data = yaml.safe_load(result.output)
+        msg = data[0]
+        assert msg["media_id"] == MEDIA_ID
+        assert msg["media_type"] == "ImageAvif"
+        assert msg["conversation_id"] == CONV_ID
+
+    def test_media_yaml_includes_message_id_without_uuid_flag(
+        self, cli_runner, mock_auth_class, mock_api_class
+    ):
+        """When media is present, message_id is included even without --uuid."""
+        import yaml
+        detail = self._detail_with_media(
+            mediaId=UUID(MEDIA_ID), mediaType=MediaType.IMAGE_AVIF,
+        )
+        _, api = mock_api_class
+        api.get_conversation_detail.return_value = detail
+        result = cli_runner.invoke(cli, ["--yaml", "messages", CONV_ID])
+        data = yaml.safe_load(result.output)
+        msg = data[0]
+        assert msg["message_id"] == MSG_ID
 
 
 class TestMessagesAuth:

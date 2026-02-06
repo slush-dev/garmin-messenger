@@ -68,6 +68,31 @@ var listenCmd = &cobra.Command{
 				if msg.LiveTrackUrl != nil {
 					row["live_track_url"] = *msg.LiveTrackUrl
 				}
+				if hasMedia(msg.MediaID) {
+					if !showUUID {
+						row["conversation_id"] = convID
+						row["message_id"] = msg.MessageID.String()
+					}
+					row["media_id"] = msg.MediaID.String()
+					if msg.MediaType != nil {
+						row["media_type"] = string(*msg.MediaType)
+					}
+					if msg.MediaMetadata != nil {
+						meta := map[string]any{}
+						if msg.MediaMetadata.Width != nil {
+							meta["width"] = *msg.MediaMetadata.Width
+						}
+						if msg.MediaMetadata.Height != nil {
+							meta["height"] = *msg.MediaMetadata.Height
+						}
+						if msg.MediaMetadata.DurationMs != nil {
+							meta["duration_ms"] = *msg.MediaMetadata.DurationMs
+						}
+						if len(meta) > 0 {
+							row["media_metadata"] = meta
+						}
+					}
+				}
 				fmt.Println("---")
 				yamlOut(row)
 			} else {
@@ -88,6 +113,9 @@ var listenCmd = &cobra.Command{
 				}
 				if msg.LiveTrackUrl != nil {
 					fmt.Printf("   LiveTrack: %s\n", *msg.LiveTrackUrl)
+				}
+				if mediaCmd := formatMediaCmd(msg.ConversationID, msg.MessageID, msg.MediaID, msg.MediaType); mediaCmd != "" {
+					fmt.Printf("   %s\n", mediaCmd)
 				}
 			}
 			sr.MarkAsDelivered(msg.ConversationID, msg.MessageID)

@@ -296,7 +296,7 @@ class UpdateMediaResponse(BaseModel):
 class MediaAttachmentDownloadUrlResponse(BaseModel):
     """Response from GET Message/Media/DownloadUrl."""
 
-    url: str
+    downloadUrl: str
 
 
 class InReachMessageMetadata(BaseModel):

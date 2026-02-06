@@ -8,6 +8,8 @@ from uuid import UUID
 
 import pytest
 from garmin_messenger.models import (
+    MediaMetadata,
+    MediaType,
     MessageModel,
     MessageStatusUpdate,
     SimpleCompoundMessageId,
@@ -17,6 +19,8 @@ from garmin_messenger.models import (
 from garmin_messenger_cli.main import cli
 
 from .conftest import CONV_ID, MODULE, MSG_ID, STATUS_USER_UUID, USER_ID
+
+MEDIA_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
 class TestListenSetup:
@@ -459,6 +463,109 @@ class TestListenUuidFlag:
     def test_help_shows_uuid_flag(self, cli_runner):
         result = cli_runner.invoke(cli, ["listen", "--help"])
         assert "--uuid" in result.output
+
+
+class TestListenMedia:
+    """Media attachment display in listen."""
+
+    def _get_handlers(self, cli_runner, mock_auth_class, mock_signalr_class):
+        _, sr = mock_signalr_class
+        with patch(f"{MODULE}.time.sleep", side_effect=SystemExit(0)), \
+             patch(f"{MODULE}.signal.signal"):
+            cli_runner.invoke(cli, ["listen"])
+        on_msg = sr.on_message.call_args[0][0]
+        return on_msg, sr
+
+    def _get_handlers_yaml(self, cli_runner, mock_auth_class, mock_signalr_class):
+        _, sr = mock_signalr_class
+        with patch(f"{MODULE}.time.sleep", side_effect=SystemExit(0)), \
+             patch(f"{MODULE}.signal.signal"):
+            cli_runner.invoke(cli, ["--yaml", "listen"])
+        on_msg = sr.on_message.call_args[0][0]
+        return on_msg, sr
+
+    def test_media_cmd_shown_text(
+        self, cli_runner, mock_auth_class, mock_signalr_class, capsys
+    ):
+        on_msg, _ = self._get_handlers(
+            cli_runner, mock_auth_class, mock_signalr_class
+        )
+        msg = MessageModel(
+            messageId=UUID(MSG_ID),
+            conversationId=UUID(CONV_ID),
+            messageBody="Photo",
+            from_=USER_ID,
+            mediaId=UUID(MEDIA_ID),
+            mediaType=MediaType.IMAGE_AVIF,
+        )
+        on_msg(msg)
+        captured = capsys.readouterr()
+        assert "garmin-messenger media" in captured.out
+        assert MEDIA_ID in captured.out
+        assert "ImageAvif" in captured.out
+
+    def test_no_media_no_cmd(
+        self, cli_runner, mock_auth_class, mock_signalr_class, capsys
+    ):
+        on_msg, _ = self._get_handlers(
+            cli_runner, mock_auth_class, mock_signalr_class
+        )
+        msg = MessageModel(
+            messageId=UUID(MSG_ID),
+            conversationId=UUID(CONV_ID),
+            messageBody="Just text",
+            from_=USER_ID,
+        )
+        on_msg(msg)
+        captured = capsys.readouterr()
+        assert "garmin-messenger media" not in captured.out
+
+    def test_media_yaml_includes_fields(
+        self, cli_runner, mock_auth_class, mock_signalr_class, capsys
+    ):
+        import yaml
+        on_msg, _ = self._get_handlers_yaml(
+            cli_runner, mock_auth_class, mock_signalr_class
+        )
+        msg = MessageModel(
+            messageId=UUID(MSG_ID),
+            conversationId=UUID(CONV_ID),
+            messageBody="Photo",
+            from_=USER_ID,
+            mediaId=UUID(MEDIA_ID),
+            mediaType=MediaType.IMAGE_AVIF,
+            mediaMetadata=MediaMetadata(width=1920, height=1080),
+        )
+        on_msg(msg)
+        captured = capsys.readouterr()
+        data = yaml.safe_load(captured.out)
+        assert data["media_id"] == MEDIA_ID
+        assert data["media_type"] == "ImageAvif"
+        assert data["media_metadata"]["width"] == 1920
+        assert data["media_metadata"]["height"] == 1080
+        assert data["conversation_id"] == CONV_ID
+        assert data["message_id"] == MSG_ID
+
+    def test_media_yaml_duration(
+        self, cli_runner, mock_auth_class, mock_signalr_class, capsys
+    ):
+        import yaml
+        on_msg, _ = self._get_handlers_yaml(
+            cli_runner, mock_auth_class, mock_signalr_class
+        )
+        msg = MessageModel(
+            messageId=UUID(MSG_ID),
+            conversationId=UUID(CONV_ID),
+            messageBody="Audio",
+            from_=USER_ID,
+            mediaId=UUID(MEDIA_ID),
+            mediaType=MediaType.AUDIO_OGG,
+            mediaMetadata=MediaMetadata(durationMs=5000),
+        )
+        on_msg(msg)
+        captured = capsys.readouterr()
+        data = yaml.safe_load(captured.out)
+        assert data["media_metadata"]["duration_ms"] == 5000
 
 
 class TestListenHelp:
