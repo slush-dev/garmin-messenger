@@ -1,0 +1,13 @@
+{
+  "conversations": [
+    {
+      "conversationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "memberIds": ["+15551234567", "+15559876543"],
+      "updatedDate": "2025-01-15T10:30:00Z",
+      "createdDate": "2025-01-01T00:00:00Z",
+      "isMuted": false,
+      "isPost": false
+    }
+  ],
+  "lastConversationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
