@@ -35,9 +35,11 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 
 ```
 ├── clients/                 Client library implementations
-│   └── python/              Python client library (complete, 231 tests)
+│   ├── python/              Python client library (complete, 231 tests)
+│   └── go/                  Go client library (complete, 94 tests)
 ├── apps/                    Standalone applications
-│   └── cli/                 CLI tool (complete, 263 tests)
+│   ├── cli/                 Python CLI tool (complete, 263 tests)
+│   └── go-cli/              Go CLI tool (complete)
 ├── tests/                   Cross-implementation test infrastructure
 │   └── fixtures/            Shared mock API response data (17 JSON files)
 ├── docs/                    Protocol & API documentation
@@ -49,19 +51,31 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 | Language | Directory | Status | README |
 |---|---|---|---|
 | Python | [`clients/python/`](clients/python/) | Complete | **[Python Client README](clients/python/README.md)** |
-| Go | `clients/go/` | Planned | — |
+| Go | [`clients/go/`](clients/go/) | Complete | **[Go Client README](clients/go/README.md)** |
 
 ## Applications
 
 | App | Directory | Description |
 |---|---|---|
-| CLI | [`apps/cli/`](apps/cli/) | Full-featured command-line tool — **[CLI README](apps/cli/README.md)** |
+| Python CLI | [`apps/cli/`](apps/cli/) | Full-featured command-line tool — **[CLI README](apps/cli/README.md)** |
+| Go CLI | [`apps/go-cli/`](apps/go-cli/) | Native Go binary — **[Go CLI README](apps/go-cli/README.md)** |
 
 > Want to add an implementation or application? Contributions are welcome — see [Contributing](#contributing).
 
 ## Quick Start
 
-### CLI (fastest)
+### Go CLI (single binary, no runtime)
+
+```bash
+make build-go    # outputs bin/garmin-messenger
+
+bin/garmin-messenger login --phone "+1234567890"
+bin/garmin-messenger conversations
+bin/garmin-messenger send --to "+1234567890" --message "Hello from base!"
+bin/garmin-messenger listen
+```
+
+### Python CLI
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -73,9 +87,9 @@ garmin-messenger send --to "+1234567890" --message "Hello from base!"
 garmin-messenger listen
 ```
 
-### Python library
+### Library usage
 
-See [clients/python/README.md](clients/python/README.md) for library usage examples.
+See [clients/go/README.md](clients/go/README.md) (Go) or [clients/python/README.md](clients/python/README.md) (Python) for library usage examples.
 
 ## Authentication Flow
 
@@ -127,6 +141,12 @@ make lint
 # Run only Python tests
 make test-python
 
+# Run only Go tests
+make test-go
+
+# Build Go CLI binary
+make build-go
+
 # Install Python client in dev mode
 make build-python
 
@@ -169,7 +189,7 @@ Yes. Garmin Messenger supports messaging between app users (phone-to-phone) and 
 
 Contributions are welcome! Particularly:
 
-- **New language implementations** — Go, Rust, TypeScript/Node.js
+- **New language implementations** — Rust, TypeScript/Node.js, C
 - **Applications** — CLI tools, chat bots, bridges to other platforms
 - **Documentation** — Improvements to API docs, examples, and guides
 - **Test infrastructure** — Conformance tests, mock server, fixtures
@@ -186,4 +206,4 @@ This is an unofficial, community-built client. It is not affiliated with, endors
 
 ---
 
-**Keywords:** Garmin Messenger API, Garmin InReach API client, InReach satellite messenger, send message to InReach, Garmin Messenger Python library, InReach two-way messaging, Garmin satellite communication SDK, InReach Mini 2 API, Garmin Messenger protocol, Hermes API, satellite messenger integration, InReach automation, Garmin Messenger bot, InReach REST API, Garmin Messenger WebSocket, Garmin inReach SDK
+**Keywords:** Garmin Messenger API, Garmin InReach API client, InReach satellite messenger, send message to InReach, Garmin Messenger Python library, Garmin Messenger Go library, InReach two-way messaging, Garmin satellite communication SDK, InReach Mini 2 API, Garmin Messenger protocol, Hermes API, satellite messenger integration, InReach automation, Garmin Messenger bot, InReach REST API, Garmin Messenger WebSocket, Garmin inReach SDK
