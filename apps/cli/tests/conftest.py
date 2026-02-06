@@ -76,7 +76,12 @@ def mock_auth_class():
         instance.instance_id = INSTANCE_ID
         instance.expires_at = time.time() + 3600
         instance.resume.return_value = None
-        instance.login_sms.return_value = None
+        instance.request_otp.return_value = MagicMock(
+            request_id="req-abc-123",
+            phone_number="+15551234567",
+            device_name="garmin-messenger",
+        )
+        instance.confirm_otp.return_value = None
         MockCls.return_value = instance
         yield MockCls, instance
 

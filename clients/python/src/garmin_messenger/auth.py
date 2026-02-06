@@ -1,10 +1,10 @@
 """Garmin Messenger authentication: SMS OTP → Hermes JWT.
 
 Uses the Registration/App path (same as the real Android app):
-  1. POST Registration/App  → request SMS OTP
-  2. User enters OTP code
-  3. POST Registration/App/Confirm → Hermes JWT (accessToken + refreshToken)
-  4. POST Registration/App/Refresh  → refresh when expired
+  1. request_otp()   → POST Registration/App  → SMS OTP sent to phone
+  2. Caller collects OTP code (terminal prompt, GUI dialog, web form, …)
+  3. confirm_otp()   → POST Registration/App/Confirm → Hermes JWT
+  4. Auto-refresh via POST Registration/App/Refresh when expired
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -23,6 +22,7 @@ from garmin_messenger.models import (
     ConfirmAppRegistrationBody,
     NewAppRegistrationBody,
     NewAppRegistrationResponse,
+    OtpRequest,
     RefreshAuthBody,
 )
 
@@ -81,11 +81,10 @@ def _dump_response(resp: httpx.Response, *, body_limit: int = 2000) -> None:
 class HermesAuth:
     """Manages the full authentication lifecycle for Hermes messaging API.
 
-    SMS registration flow (same as the real Android app):
-        1. POST Registration/App → triggers SMS OTP to phone
-        2. User enters OTP code
-        3. POST Registration/App/Confirm → Hermes JWT
-        4. Auto-refresh via POST Registration/App/Refresh when expired
+    SMS registration flow (two-step, headless):
+        1. request_otp(phone)  → sends SMS, returns OtpRequest
+        2. confirm_otp(otp_request, code) → exchanges OTP for Hermes JWT
+        3. Auto-refresh via POST Registration/App/Refresh when expired
     """
 
     def __init__(
@@ -104,22 +103,21 @@ class HermesAuth:
 
     # ----- public API --------------------------------------------------------
 
-    def login_sms(
+    def request_otp(
         self,
         phone_number: str,
-        prompt_otp: Callable[[], str] = lambda: input("Enter SMS OTP code: "),
         device_name: str = "garmin-messenger",
-    ) -> None:
-        """Full login via SMS OTP.
+    ) -> OtpRequest:
+        """Request an SMS OTP code for *phone_number*.
+
+        Returns an :class:`OtpRequest` that must be passed to
+        :meth:`confirm_otp` together with the code the user received.
 
         Args:
             phone_number: Phone number with country code (e.g. "+1234567890").
-            prompt_otp: Callable that returns the 6-digit OTP string.
-                        Defaults to reading from stdin.
             device_name: Device identifier shown on the account
                          (default: "garmin-messenger").
         """
-        # Step 1: Request SMS OTP
         log.debug("=" * 70)
         log.debug("STAGE 1: Request SMS OTP")
         log.debug("=" * 70)
@@ -149,24 +147,36 @@ class HermesAuth:
         log.debug("  validUntil: %s", otp_resp.validUntil)
         log.debug("  attemptsRemaining: %s", otp_resp.attemptsRemaining)
 
-        # Step 2: Get OTP from user
-        log.debug("=" * 70)
-        log.debug("STAGE 2: Waiting for SMS OTP code")
-        log.debug("=" * 70)
-        otp_code = prompt_otp()
-        log.debug("  OTP code entered: %s", otp_code)
+        return OtpRequest(
+            request_id=otp_resp.requestId,
+            phone_number=phone_number,
+            device_name=device_name,
+            valid_until=otp_resp.validUntil,
+            attempts_remaining=otp_resp.attemptsRemaining,
+        )
 
-        # Step 3: Confirm registration with OTP
+    def confirm_otp(self, otp_request: OtpRequest, otp_code: str) -> None:
+        """Confirm registration with the SMS OTP code.
+
+        Args:
+            otp_request: The :class:`OtpRequest` returned by :meth:`request_otp`.
+            otp_code: The 6-digit OTP code the user received via SMS.
+        """
         log.debug("=" * 70)
         log.debug("STAGE 3: Confirm registration with OTP")
         log.debug("=" * 70)
 
         url = f"{self.hermes_base}/Registration/App/Confirm"
+        req_headers = {
+            "RegistrationApiKey": REGISTRATION_API_KEY,
+            "Api-Version": "1.0",
+            "Content-Type": "application/json",
+        }
         confirm_body = ConfirmAppRegistrationBody(
-            requestId=otp_resp.requestId,
-            smsNumber=phone_number,
+            requestId=otp_request.request_id,
+            smsNumber=otp_request.phone_number,
             verificationCode=otp_code,
-            appDescription=device_name,
+            appDescription=otp_request.device_name,
         )
         req_json = confirm_body.model_dump()
         _dump_request("POST", url, headers=req_headers, json_body=req_json)
@@ -214,7 +224,7 @@ class HermesAuth:
         else:
             raise RuntimeError(
                 f"No saved credentials found at {creds_path}. "
-                "Run login_sms() first."
+                "Call request_otp() + confirm_otp() first."
             )
 
     def headers(self) -> dict[str, str]:
@@ -241,7 +251,8 @@ class HermesAuth:
         """Refresh the Hermes access token."""
         if not self.refresh_token or not self.instance_id:
             raise RuntimeError(
-                "No refresh token / instance ID. Call login_sms() first."
+                "No refresh token / instance ID. "
+                "Call request_otp() + confirm_otp() first."
             )
         log.debug("Refreshing Hermes token …")
         body = RefreshAuthBody(

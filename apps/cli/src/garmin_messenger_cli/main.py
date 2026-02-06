@@ -211,7 +211,9 @@ def login(ctx: click.Context, phone: str | None, device_name: str) -> None:
 
     if not ctx.obj["yaml"]:
         click.echo(f"Requesting SMS OTP for {phone} ...")
-    auth.login_sms(phone, device_name=device_name)
+    otp_request = auth.request_otp(phone, device_name=device_name)
+    otp_code = click.prompt("Enter SMS OTP code")
+    auth.confirm_otp(otp_request, otp_code)
 
     if not auth.access_token:
         click.echo("Authentication failed — no access token.", err=True)
