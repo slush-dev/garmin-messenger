@@ -29,16 +29,18 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache-dependency-path: apps/go-cli/go.sum
 
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.event.release.tag_name }}
         run: |
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
           cd apps/go-cli
-          go build -trimpath -ldflags="-s -w" \
+          go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" \
             -o "../../garmin-messenger-${GOOS}-${GOARCH}${ext}" .
 
       - name: Upload release asset

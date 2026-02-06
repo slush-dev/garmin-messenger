@@ -53,7 +53,7 @@ build-python-lib: ## Install Python library in dev mode
 build-python-cli: ## Install Python CLI in dev mode
 	cd apps/python-cli && pip install -e .
 build-go-cli: ## Build Go CLI binary
-	cd apps/go-cli && go build -trimpath -ldflags="-s -w" -o ../../build/go/garmin-messenger .
+	cd apps/go-cli && go build -trimpath -ldflags="-s -w -X main.version=$$(git describe --tags --always --dirty)" -o ../../build/go/garmin-messenger .
 
 # ---------------------------------------------------------------------------
 # Cleanup

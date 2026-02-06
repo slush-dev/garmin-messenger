@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "garmin-messenger"
-version = "1.0.1"
+dynamic = ["version"]
 description = "Unofficial Garmin Messenger API client for communicating with InReach satellite devices"
 readme = "README.md"
 license = "MIT"
@@ -35,6 +35,10 @@ dev = [
     "pytest-httpx>=0.30",
     "ruff>=0.4",
 ]
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = "../.." }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/garmin_messenger"]
