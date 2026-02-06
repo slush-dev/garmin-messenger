@@ -89,7 +89,7 @@ var mediaCmd = &cobra.Command{
 			output = mediaID.String() + mediaExtension(mediaType)
 		}
 
-		if err := os.WriteFile(output, data, 0644); err != nil {
+		if err := os.WriteFile(output, data, 0o644); err != nil {
 			return fmt.Errorf("writing file: %w", err)
 		}
 

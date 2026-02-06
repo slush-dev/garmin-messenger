@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
 
 	gm "github.com/slush-dev/garmin-messenger"
 	"github.com/spf13/cobra"
@@ -172,7 +171,7 @@ var listenCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "SignalR error: %v\n", err)
 		})
 
-		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 
 		if err := sr.Start(ctx); err != nil {
