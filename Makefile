@@ -1,4 +1,4 @@
-.PHONY: help test test-python test-cli test-go lint lint-python lint-cli lint-go build build-python build-cli proto-gen clean
+.PHONY: help test test-python test-cli test-go test-go-cli lint lint-python lint-cli lint-go lint-go-cli build build-python build-cli build-go proto-gen clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -8,7 +8,7 @@ help: ## Show this help
 # Test
 # ---------------------------------------------------------------------------
 
-test: test-python test-cli ## Run all tests
+test: test-python test-cli test-go test-go-cli ## Run all tests
 
 test-python: ## Run Python client tests
 	cd clients/python && python -m pytest tests/ -v
@@ -17,13 +17,16 @@ test-cli: ## Run CLI app tests
 	cd apps/cli && python -m pytest tests/ -v
 
 test-go: ## Run Go client tests
-	cd clients/go && go test ./...
+	cd clients/go && go test ./... -v
+
+test-go-cli: ## Run Go CLI tests
+	cd apps/go-cli && go test ./... -v
 
 # ---------------------------------------------------------------------------
 # Lint
 # ---------------------------------------------------------------------------
 
-lint: lint-python lint-cli ## Lint all code
+lint: lint-python lint-cli lint-go lint-go-cli ## Lint all code
 
 lint-python: ## Lint Python client
 	cd clients/python && python -m ruff check src/ tests/
@@ -34,17 +37,23 @@ lint-cli: ## Lint CLI app
 lint-go: ## Lint Go client
 	cd clients/go && go vet ./...
 
+lint-go-cli: ## Lint Go CLI
+	cd apps/go-cli && go vet ./...
+
 # ---------------------------------------------------------------------------
 # Build / Install
 # ---------------------------------------------------------------------------
 
-build: build-python build-cli ## Build all
+build: build-python build-cli build-go ## Build all
 
 build-python: ## Install Python client in dev mode
 	cd clients/python && pip install -e ".[dev]"
 
 build-cli: ## Install CLI app in dev mode
 	cd apps/cli && pip install -e .
+
+build-go: ## Build Go CLI binary
+	cd apps/go-cli && go build -o ../../bin/garmin-messenger .
 
 # ---------------------------------------------------------------------------
 # Protobuf
@@ -62,3 +71,4 @@ clean: ## Remove build artifacts
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+	rm -rf bin/ 2>/dev/null || true
