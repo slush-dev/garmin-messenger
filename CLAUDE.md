@@ -10,7 +10,7 @@ Protocol docs live in `docs/`.
 | Directory | Purpose |
 |-----------|---------|
 | `clients/python/` | Python client library (pip-installable, src layout) |
-| `clients/go/` | Go client library (planned) |
+| `clients/go/` | Go client library (single `garminmessenger` package) |
 | `clients/rust/` | Rust client crate (planned) |
 | `clients/c/` | C client library (planned) |
 | `apps/` | Standalone applications (CLI, bots) |
@@ -59,6 +59,55 @@ garmin-messenger send --to "+1234567890" --message "Hello"
 garmin-messenger listen
 ```
 
+## Go Client (`clients/go/`)
+
+### Setup
+
+```bash
+cd clients/go
+go mod tidy
+go test ./... -v
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `clients/go/models.go` | All structs, enums, and JSON deserialization (50+ types) |
+| `clients/go/auth.go` | SMS OTP registration + token refresh (HermesAuth) |
+| `clients/go/api.go` | Hermes REST API client (HermesAPI) |
+| `clients/go/signalr.go` | SignalR WebSocket client for real-time events |
+| `clients/go/otauuid.go` | OTA UUID generator (Garmin's custom bit layout) |
+
+### Testing
+
+```bash
+make test-go
+# or: cd clients/go && go test ./... -v
+```
+
+### Module
+
+`github.com/slush-dev/garmin-messenger` — single flat package `garminmessenger`.
+
+## Go CLI App (`apps/go-cli/`)
+
+Cobra-based CLI that wraps the Go client library. Same commands as Python CLI.
+
+```bash
+garmin-messenger login --phone "+1234567890"
+garmin-messenger conversations
+garmin-messenger messages <CONVERSATION_ID>
+garmin-messenger send --to "+1234567890" --message "Hello"
+garmin-messenger listen
+```
+
+### Build
+
+```bash
+make build-go   # outputs bin/garmin-messenger
+```
+
 ## Build Orchestration
 
 Bootstrap everything from a clean clone:
@@ -77,6 +126,9 @@ make test-python   # just Python tests
 make lint          # lint all code
 make build-python  # pip install -e ".[dev]"
 make build-cli     # pip install -e apps/cli
+make test-go       # Go client tests
+make lint-go       # Go client lint (go vet)
+make build-go      # build Go CLI binary
 ```
 
 ## Important Rules
