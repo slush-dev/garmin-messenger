@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -e "clients/python[dev]"
+          pip install -e apps/cli
+      - name: Lint Python client
+        run: ruff check clients/python/src/ clients/python/tests/
+      - name: Lint CLI app
+        run: ruff check apps/cli/src/ apps/cli/tests/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -e "clients/python[dev]"
+          pip install -e apps/cli
+      - name: Test Python client
+        run: python -m pytest clients/python/tests/ -v
+      - name: Test CLI app
+        run: python -m pytest apps/cli/tests/ -v

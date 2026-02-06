@@ -4,6 +4,7 @@
 
 Send and receive messages to Garmin InReach satellite messengers over the internet using just a Garmin Messenger account and a phone number.
 
+[![CI](https://github.com/slush-dev/garmin-messenger/actions/workflows/ci.yml/badge.svg)](https://github.com/slush-dev/garmin-messenger/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -49,8 +50,6 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 |---|---|---|---|
 | Python | [`clients/python/`](clients/python/) | Complete | **[Python Client README](clients/python/README.md)** |
 | Go | `clients/go/` | Planned | — |
-| Rust | `clients/rust/` | Planned | — |
-| C | `clients/c/` | Planned | — |
 
 ## Applications
 
@@ -65,6 +64,7 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 ### CLI (fastest)
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e clients/python && pip install -e apps/cli
 
 garmin-messenger login --phone "+1234567890"
@@ -169,7 +169,7 @@ Yes. Garmin Messenger supports messaging between app users (phone-to-phone) and 
 
 Contributions are welcome! Particularly:
 
-- **New language implementations** — Go, Rust, C, TypeScript/Node.js
+- **New language implementations** — Go, Rust, TypeScript/Node.js
 - **Applications** — CLI tools, chat bots, bridges to other platforms
 - **Documentation** — Improvements to API docs, examples, and guides
 - **Test infrastructure** — Conformance tests, mock server, fixtures
