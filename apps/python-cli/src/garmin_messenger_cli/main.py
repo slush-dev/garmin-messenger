@@ -495,7 +495,10 @@ def send(
 @click.argument("message_id")
 @click.option("--output", "-o", default=None, help="Output file path (default: {media_id}.{ext}).")
 @click.option("--media-id", default=None, help="Media ID (skip fetching message details).")
-@click.option("--media-type", default=None, help="Media type: ImageAvif or AudioOgg (skip fetching message details).")
+@click.option(
+    "--media-type", default=None,
+    help="Media type: ImageAvif or AudioOgg (skip fetching message details).",
+)
 @_yaml_option
 @click.pass_context
 def media(
@@ -567,7 +570,8 @@ def media(
         fh.write(data)
 
     if ctx.obj["yaml"]:
-        _yaml_out({"file": output, "bytes": len(data), "media_type": m_type.value if m_type else ""})
+        mt = m_type.value if m_type else ""
+        _yaml_out({"file": output, "bytes": len(data), "media_type": mt})
     else:
         click.echo(f"Downloaded {len(data)} bytes → {output}")
 
