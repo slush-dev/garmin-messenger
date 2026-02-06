@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "garmin-messenger"
-version = "1.0.0"
+version = "1.0.1"
 description = "Unofficial Garmin Messenger API client for communicating with InReach satellite devices"
 readme = "README.md"
 license = "MIT"
