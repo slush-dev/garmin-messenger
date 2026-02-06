@@ -31,7 +31,7 @@ from garmin_messenger.models import (
 )
 
 # ---------------------------------------------------------------------------
-# Deterministic constants (shared with clients/python/tests)
+# Deterministic constants (shared with lib/python/tests)
 # ---------------------------------------------------------------------------
 
 CONV_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"

@@ -1,4 +1,4 @@
-# Garmin Messenger — Go Client
+# Garmin Messenger — Go Library
 
 Go library for the Garmin Messenger (Hermes) protocol. Send and receive messages to Garmin InReach satellite devices programmatically.
 
@@ -11,7 +11,7 @@ For protocol documentation and API reference, see the [root README](../../README
 ```bash
 # Clone the repository
 git clone https://github.com/slush-dev/garmin-messenger.git
-cd garmin-messenger/clients/go
+cd garmin-messenger/lib/go
 
 # Run tests
 go test ./... -v
@@ -282,7 +282,7 @@ All API responses are parsed into typed Go structs. See [`models.go`](models.go)
 ## Project Structure
 
 ```
-clients/go/
+lib/go/
 ├── go.mod            # Module: github.com/slush-dev/garmin-messenger
 ├── doc.go            # Package documentation
 ├── models.go         # All structs, enums, and JSON deserialization (42 types)
@@ -296,7 +296,7 @@ clients/go/
 ## Testing
 
 ```bash
-cd clients/go
+cd lib/go
 go test ./... -v
 ```
 

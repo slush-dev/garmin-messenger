@@ -9,22 +9,22 @@ Protocol docs live in `docs/`.
 
 | Directory | Purpose |
 |-----------|---------|
-| `clients/python/` | Python client library (pip-installable, src layout) |
-| `clients/go/` | Go client library (single `garminmessenger` package) |
-| `clients/rust/` | Rust client crate (planned) |
-| `clients/c/` | C client library (planned) |
+| `lib/python/` | Python library (pip-installable, src layout) |
+| `lib/go/` | Go library (single `garminmessenger` package) |
+| `lib/rust/` | Rust crate (planned) |
+| `lib/c/` | C library (planned) |
 | `apps/` | Standalone applications (CLI, bots) |
 | `tests/` | Cross-implementation test infrastructure and fixtures |
 | `docs/` | Protocol and API documentation |
 | `tools/` | Dev tooling (mock server, protobuf codegen) |
 | `research/` | Internal notes (gitignored) |
 
-## Python Client (`clients/python/`)
+## Python Library (`lib/python/`)
 
 ### Setup
 
 ```bash
-cd clients/python
+cd lib/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -34,22 +34,22 @@ pip install -e ".[dev]"
 
 | File | Purpose |
 |------|---------|
-| `clients/python/src/garmin_messenger/models.py` | Pydantic models matching Hermes wire format |
-| `clients/python/src/garmin_messenger/auth.py` | SMS OTP registration + token refresh |
-| `clients/python/src/garmin_messenger/api.py` | Hermes REST API client (httpx) |
-| `clients/python/src/garmin_messenger/signalr.py` | SignalR WebSocket client for real-time events |
-| `clients/python/pyproject.toml` | Package config and dependencies |
+| `lib/python/src/garmin_messenger/models.py` | Pydantic models matching Hermes wire format |
+| `lib/python/src/garmin_messenger/auth.py` | SMS OTP registration + token refresh |
+| `lib/python/src/garmin_messenger/api.py` | Hermes REST API client (httpx) |
+| `lib/python/src/garmin_messenger/signalr.py` | SignalR WebSocket client for real-time events |
+| `lib/python/pyproject.toml` | Package config and dependencies |
 
 ### Testing
 
 ```bash
-make test-python
-# or: cd clients/python && python -m pytest tests/ -v
+make test-python-lib
+# or: cd lib/python && python -m pytest tests/ -v
 ```
 
-## CLI App (`apps/cli/`)
+## Python CLI App (`apps/python-cli/`)
 
-Standalone click-based CLI that wraps the Python client library.
+Standalone click-based CLI that wraps the Python library.
 
 ```bash
 garmin-messenger login --phone "+1234567890"
@@ -59,12 +59,12 @@ garmin-messenger send --to "+1234567890" --message "Hello"
 garmin-messenger listen
 ```
 
-## Go Client (`clients/go/`)
+## Go Library (`lib/go/`)
 
 ### Setup
 
 ```bash
-cd clients/go
+cd lib/go
 go mod tidy
 go test ./... -v
 ```
@@ -73,17 +73,17 @@ go test ./... -v
 
 | File | Purpose |
 |------|---------|
-| `clients/go/models.go` | All structs, enums, and JSON deserialization (50+ types) |
-| `clients/go/auth.go` | SMS OTP registration + token refresh (HermesAuth) |
-| `clients/go/api.go` | Hermes REST API client (HermesAPI) |
-| `clients/go/signalr.go` | SignalR WebSocket client for real-time events |
-| `clients/go/otauuid.go` | OTA UUID generator (Garmin's custom bit layout) |
+| `lib/go/models.go` | All structs, enums, and JSON deserialization (50+ types) |
+| `lib/go/auth.go` | SMS OTP registration + token refresh (HermesAuth) |
+| `lib/go/api.go` | Hermes REST API client (HermesAPI) |
+| `lib/go/signalr.go` | SignalR WebSocket client for real-time events |
+| `lib/go/otauuid.go` | OTA UUID generator (Garmin's custom bit layout) |
 
 ### Testing
 
 ```bash
-make test-go
-# or: cd clients/go && go test ./... -v
+make test-go-lib
+# or: cd lib/go && go test ./... -v
 ```
 
 ### Module
@@ -92,7 +92,7 @@ make test-go
 
 ## Go CLI App (`apps/go-cli/`)
 
-Cobra-based CLI that wraps the Go client library. Same commands as Python CLI.
+Cobra-based CLI that wraps the Go library. Same commands as Python CLI.
 
 ```bash
 garmin-messenger login --phone "+1234567890"
@@ -105,7 +105,7 @@ garmin-messenger listen
 ### Build
 
 ```bash
-make build-go   # outputs bin/garmin-messenger
+make build-go-cli   # outputs build/go/garmin-messenger
 ```
 
 ## Build Orchestration
@@ -113,22 +113,25 @@ make build-go   # outputs bin/garmin-messenger
 Bootstrap everything from a clean clone:
 
 ```bash
-./scripts/build_all.sh
+./scripts/python-create-env.sh
 source .venv/bin/activate
 ```
 
 Or use the top-level Makefile (requires an active venv):
 
 ```bash
-make help          # list all targets
-make test          # run all tests
-make test-python   # just Python tests
-make lint          # lint all code
-make build-python  # pip install -e ".[dev]"
-make build-cli     # pip install -e apps/cli
-make test-go       # Go client tests
-make lint-go       # Go client lint (go vet)
-make build-go      # build Go CLI binary
+make help              # list all targets
+make test              # run all tests
+make test-python       # all Python tests (lib + CLI)
+make test-python-lib   # just Python library tests
+make test-python-cli   # just Python CLI tests
+make test-go           # all Go tests (lib + CLI)
+make test-go-lib       # just Go library tests
+make test-go-cli       # just Go CLI tests
+make lint              # lint all code
+make build-python-lib  # pip install -e ".[dev]"
+make build-python-cli  # pip install -e apps/python-cli
+make build-go-cli      # build Go CLI binary
 ```
 
 ## Important Rules

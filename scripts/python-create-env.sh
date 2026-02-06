@@ -9,6 +9,6 @@ python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
 echo "==> Installing packages via Makefile"
-make -C "$REPO_ROOT" build
+make -C "$REPO_ROOT" build-python
 
 echo "==> Done. Activate with: source .venv/bin/activate"

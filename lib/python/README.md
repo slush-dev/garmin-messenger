@@ -1,8 +1,8 @@
-# Garmin Messenger — Python Client
+# Garmin Messenger — Python Library
 
 Python library for the Garmin Messenger (Hermes) protocol. Send and receive messages to Garmin InReach satellite devices programmatically.
 
-For protocol documentation and API reference, see the [root README](../../README.md) and [docs/api-reference.md](../../docs/api-reference.md). For the CLI tool, see [apps/cli/](../../apps/cli/).
+For protocol documentation and API reference, see the [root README](../../README.md) and [docs/api-reference.md](../../docs/api-reference.md). For the CLI tool, see [apps/python-cli/](../../apps/python-cli/).
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
@@ -11,7 +11,7 @@ For protocol documentation and API reference, see the [root README](../../README
 ```bash
 # Clone the repository
 git clone https://github.com/slush-dev/garmin-messenger.git
-cd garmin-messenger/clients/python
+cd garmin-messenger/lib/python
 
 # Set up the virtual environment
 python3 -m venv .venv
@@ -22,7 +22,7 @@ pip install -e ".[dev]"
 ## Installation
 
 ```bash
-cd clients/python
+cd lib/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -276,7 +276,7 @@ All API responses are parsed into typed [Pydantic](https://docs.pydantic.dev/) m
 ## Project Structure
 
 ```
-clients/python/
+lib/python/
 ├── pyproject.toml             # Package config and dependencies
 ├── src/
 │   └── garmin_messenger/
@@ -291,7 +291,7 @@ clients/python/
 ## Testing
 
 ```bash
-cd clients/python
+cd lib/python
 python -m pytest tests/ -v
 ```
 

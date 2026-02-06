@@ -2,7 +2,7 @@
 
 Command-line interface for Garmin Messenger (Hermes) — send, receive, and manage satellite messages from your terminal.
 
-Built on the [Go client library](../../clients/go/).
+Built on the [Go library](../../lib/go/).
 
 [![Go 1.24+](https://img.shields.io/badge/go-1.24+-00ADD8.svg)](https://go.dev/dl/)
 
@@ -12,11 +12,11 @@ Built on the [Go client library](../../clients/go/).
 cd garmin-messenger
 
 # Build the binary
-make build-go    # outputs bin/garmin-messenger
+make build-go-cli    # outputs build/go/garmin-messenger
 
 # Or build directly
 cd apps/go-cli
-go build -o ../../bin/garmin-messenger .
+go build -o ../../build/go/garmin-messenger .
 ```
 
 ## Authentication
