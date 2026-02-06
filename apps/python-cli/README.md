@@ -73,7 +73,23 @@ garmin-messenger send --to "+1234567890" --message "At camp" \
 
 # With media attachment (AVIF image or OGG audio)
 garmin-messenger send --to "+1234567890" --message "Photo from camp" \
-    --media photo.avif --media-type avif
+    --file photo.avif
+```
+
+### media
+
+Download a media attachment (photo or voice message) from a message. The `messages` and `listen` commands print copy-pasteable `media` commands for messages with attachments.
+
+```bash
+# Download using IDs from messages/listen output
+garmin-messenger media CONVERSATION_ID MESSAGE_ID \
+    --media-id MEDIA_ID --media-type ImageAvif
+
+# Auto-detect media from conversation (fetches message details)
+garmin-messenger media CONVERSATION_ID MESSAGE_ID
+
+# Save to a specific file
+garmin-messenger media CONVERSATION_ID MESSAGE_ID -o photo.avif
 ```
 
 ### listen
@@ -86,7 +102,7 @@ garmin-messenger listen --uuid    # show conversation/message/sender UUIDs
 garmin-messenger listen --yaml    # YAML output format
 ```
 
-Automatically marks incoming messages as delivered.
+Automatically marks incoming messages as delivered. Messages with media attachments include a copy-pasteable `garmin-messenger media` download command.
 
 ### members
 
@@ -172,4 +188,4 @@ cd apps/python-cli
 python -m pytest tests/ -v
 ```
 
-263 tests across 14 test files covering all commands, contact management, and output formats.
+285 tests across 15 test files covering all commands, contact management, and output formats.

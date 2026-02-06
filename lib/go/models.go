@@ -343,7 +343,7 @@ type UpdateMediaResponse struct {
 
 // MediaAttachmentDownloadUrlResponse is the response from GET Message/Media/DownloadUrl.
 type MediaAttachmentDownloadUrlResponse struct {
-	URL string `json:"url"`
+	URL string `json:"downloadUrl"`
 }
 
 // InReachMessageMetadata contains satellite message metadata.

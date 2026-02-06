@@ -220,7 +220,7 @@ def sample_send_response_with_upload_dict(sample_signed_upload_url_dict):
 
 @pytest.fixture
 def sample_media_download_url_dict():
-    return {"url": S3_DOWNLOAD_URL}
+    return {"downloadUrl": S3_DOWNLOAD_URL}
 
 
 @pytest.fixture

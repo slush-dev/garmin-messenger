@@ -696,13 +696,13 @@ class TestMediaAttachmentDownloadUrlResponse:
         resp = MediaAttachmentDownloadUrlResponse.model_validate(
             sample_media_download_url_dict,
         )
-        assert resp.url == S3_DOWNLOAD_URL
+        assert resp.downloadUrl == S3_DOWNLOAD_URL
 
     def test_from_dict(self):
         resp = MediaAttachmentDownloadUrlResponse.model_validate(
-            {"url": "https://s3.example.com/media/file.avif?sig=abc"},
+            {"downloadUrl": "https://s3.example.com/media/file.avif?sig=abc"},
         )
-        assert resp.url.startswith("https://s3.example.com/")
+        assert resp.downloadUrl.startswith("https://s3.example.com/")
 
 
 # =========================================================================== #

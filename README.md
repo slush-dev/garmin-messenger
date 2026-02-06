@@ -19,6 +19,7 @@ Garmin Messenger is a mobile app that lets you exchange text messages with Garmi
 
 - **Send messages** to InReach devices anywhere on Earth via satellite
 - **Receive messages** in real-time from InReach devices via WebSocket
+- **Download media** attachments (photos, voice messages) from conversations
 - **List conversations** and message history
 - **Track message delivery status** (sent, delivered, read)
 - **Manage conversations** (mute/unmute, block/unblock users)
@@ -42,7 +43,7 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 │   ├── python/             Python library (complete, 231 tests)
 │   └── go/                 Go library (complete, 94 tests)
 ├── apps/                   Standalone applications
-│   ├── python-cli/         Python CLI tool (complete, 263 tests)
+│   ├── python-cli/         Python CLI tool (complete, 285 tests)
 │   └── go-cli/             Go CLI tool (complete)
 ├── tests/                  Cross-implementation test infrastructure
 │   └── fixtures/           Shared mock API response data (17 JSON files)
@@ -77,6 +78,7 @@ build/go/garmin-messenger login --phone "+1234567890"
 build/go/garmin-messenger conversations
 build/go/garmin-messenger send --to "+1234567890" --message "Hello from base!"
 build/go/garmin-messenger listen
+build/go/garmin-messenger media CONVERSATION_ID MESSAGE_ID    # download attachment
 ```
 
 ### Python CLI
@@ -89,6 +91,7 @@ garmin-messenger login --phone "+1234567890"
 garmin-messenger conversations
 garmin-messenger send --to "+1234567890" --message "Hello from base!"
 garmin-messenger listen
+garmin-messenger media CONVERSATION_ID MESSAGE_ID    # download attachment
 ```
 
 ### Library usage

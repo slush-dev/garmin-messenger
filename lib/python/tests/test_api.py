@@ -350,7 +350,7 @@ class TestGetMediaDownloadUrl:
             conversation_id=UUID(CONV_ID),
         )
         assert isinstance(result, MediaAttachmentDownloadUrlResponse)
-        assert result.url == S3_DOWNLOAD_URL
+        assert result.downloadUrl == S3_DOWNLOAD_URL
 
         req = httpx_mock.get_requests()[0]
         assert req.method == "GET"

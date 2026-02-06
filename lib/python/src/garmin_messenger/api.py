@@ -293,8 +293,8 @@ class HermesAPI:
             message_id=message_id,
             conversation_id=conversation_id,
         )
-        log.debug("Downloading media from %s", url_resp.url[:80])
-        resp = self._client.get(url_resp.url)
+        log.debug("Downloading media from %s", url_resp.downloadUrl[:80])
+        resp = self._client.get(url_resp.downloadUrl)
         resp.raise_for_status()
         return resp.content
 

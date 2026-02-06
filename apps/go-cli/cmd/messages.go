@@ -84,6 +84,16 @@ var messagesCmd = &cobra.Command{
 				if m.LiveTrackUrl != nil {
 					row["live_track_url"] = *m.LiveTrackUrl
 				}
+				if hasMedia(m.MediaID) {
+					if !showUUID {
+						row["message_id"] = m.MessageID.String()
+					}
+					row["conversation_id"] = convID.String()
+					row["media_id"] = m.MediaID.String()
+					if m.MediaType != nil {
+						row["media_type"] = string(*m.MediaType)
+					}
+				}
 				rows = append(rows, row)
 			}
 			yamlOut(rows)
@@ -115,6 +125,9 @@ var messagesCmd = &cobra.Command{
 				}
 				if m.LiveTrackUrl != nil {
 					fmt.Printf("    LiveTrack: %s\n", *m.LiveTrackUrl)
+				}
+				if mediaCmd := formatMediaCmd(convID, m.MessageID, m.MediaID, m.MediaType); mediaCmd != "" {
+					fmt.Printf("    %s\n", mediaCmd)
 				}
 			}
 		}
