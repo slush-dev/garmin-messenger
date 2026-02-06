@@ -28,8 +28,10 @@ make build
 ## Authentication
 
 ```bash
-# First time — you'll receive an SMS code
+# First time — sends an SMS code, then prompts you to enter it
 garmin-messenger login --phone "+1234567890"
+# Enter SMS OTP code: 123456
+# Authenticated! instance=...
 
 # All subsequent commands reuse the saved session (~/.garmin-messenger/)
 garmin-messenger conversations

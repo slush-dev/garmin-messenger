@@ -46,8 +46,10 @@ from garmin_messenger import HermesAuth
 
 auth = HermesAuth(session_dir="~/.garmin-messenger")
 
-# First time: SMS login (interactive — prompts for OTP code)
-auth.login_sms("+1234567890")
+# First time: two-step SMS OTP registration
+otp_request = auth.request_otp("+1234567890")
+otp_code = input("Enter SMS OTP code: ")  # collect code however you like
+auth.confirm_otp(otp_request, otp_code)
 
 # Subsequent runs: resume saved session
 auth.resume()

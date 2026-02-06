@@ -405,7 +405,8 @@ class TestDeviceMetadataYaml:
 class TestLoginYaml:
     def test_returns_dict(self, cli_runner, mock_auth_class):
         result = cli_runner.invoke(
-            cli, ["--yaml", "login", "--phone", "+15551234567"]
+            cli, ["--yaml", "login", "--phone", "+15551234567"],
+            input="123456\n",
         )
         assert result.exit_code == 0
         data = _parse_yaml(result.output)
@@ -414,7 +415,8 @@ class TestLoginYaml:
 
     def test_session_dir_present(self, cli_runner, mock_auth_class):
         result = cli_runner.invoke(
-            cli, ["--yaml", "login", "--phone", "+15551234567"]
+            cli, ["--yaml", "login", "--phone", "+15551234567"],
+            input="123456\n",
         )
         data = _parse_yaml(result.output)
         assert "session_dir" in data

@@ -355,6 +355,16 @@ class NewAppRegistrationResponse(BaseModel):
     attemptsRemaining: int | None = None
 
 
+class OtpRequest(BaseModel):
+    """Pending OTP request returned by HermesAuth.request_otp()."""
+
+    request_id: str
+    phone_number: str
+    device_name: str
+    valid_until: str | None = None
+    attempts_remaining: int | None = None
+
+
 class ConfirmAppRegistrationBody(BaseModel):
     requestId: str
     smsNumber: str

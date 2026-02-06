@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from garmin_messenger.auth import HERMES_BASE, HermesAuth
+from garmin_messenger.models import OtpRequest
 
 from .conftest import ACCESS_TOKEN, INSTANCE_ID, REFRESH_TOKEN
 
@@ -67,39 +68,29 @@ class TestTokenExpired:
 
 
 # =========================================================================== #
-# login_sms
+# request_otp
 # =========================================================================== #
 
 
-class TestLoginSms:
-    def test_happy_path(self, httpx_mock, tmp_path, sample_otp_response,
-                        sample_registration_response):
+class TestRequestOtp:
+    def test_returns_otp_request(self, httpx_mock, sample_otp_response):
         httpx_mock.add_response(
             method="POST",
             url=f"{HERMES_BASE}/Registration/App",
             json=sample_otp_response,
         )
-        httpx_mock.add_response(
-            method="POST",
-            url=f"{HERMES_BASE}/Registration/App/Confirm",
-            json=sample_registration_response,
-        )
 
-        auth = HermesAuth(session_dir=str(tmp_path))
-        auth.login_sms("+15551234567", prompt_otp=lambda: "123456")
+        auth = HermesAuth()
+        result = auth.request_otp("+15551234567")
 
-        assert auth.access_token == ACCESS_TOKEN
-        assert auth.refresh_token == REFRESH_TOKEN
-        assert auth.instance_id == INSTANCE_ID
-        assert auth.expires_at > time.time()
+        assert isinstance(result, OtpRequest)
+        assert result.request_id == "req-abc-123"
+        assert result.phone_number == "+15551234567"
+        assert result.device_name == "garmin-messenger"
+        assert result.valid_until == "2025-06-01T12:00:00Z"
+        assert result.attempts_remaining == 3
 
-        requests = httpx_mock.get_requests()
-        assert len(requests) == 2
-        assert "/Registration/App" in str(requests[0].url)
-        assert "/Registration/App/Confirm" in str(requests[1].url)
-
-    def test_409_retry(self, httpx_mock, tmp_path, monkeypatch,
-                       sample_otp_response, sample_registration_response):
+    def test_409_retry(self, httpx_mock, monkeypatch, sample_otp_response):
         monkeypatch.setattr("garmin_messenger.auth.time.sleep", lambda _: None)
 
         httpx_mock.add_response(
@@ -112,26 +103,70 @@ class TestLoginSms:
             url=f"{HERMES_BASE}/Registration/App",
             json=sample_otp_response,
         )
+
+        auth = HermesAuth()
+        result = auth.request_otp("+15551234567")
+
+        assert result.request_id == "req-abc-123"
+        requests = httpx_mock.get_requests()
+        assert len(requests) == 2
+
+    def test_409_double_failure(self, httpx_mock, monkeypatch):
+        monkeypatch.setattr("garmin_messenger.auth.time.sleep", lambda _: None)
+
         httpx_mock.add_response(
             method="POST",
-            url=f"{HERMES_BASE}/Registration/App/Confirm",
-            json=sample_registration_response,
+            url=f"{HERMES_BASE}/Registration/App",
+            status_code=409,
+        )
+        httpx_mock.add_response(
+            method="POST",
+            url=f"{HERMES_BASE}/Registration/App",
+            status_code=409,
         )
 
-        auth = HermesAuth(session_dir=str(tmp_path))
-        auth.login_sms("+15551234567", prompt_otp=lambda: "123456")
+        auth = HermesAuth()
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            auth.request_otp("+15551234567")
+        assert exc_info.value.response.status_code == 409
 
-        assert auth.access_token == ACCESS_TOKEN
-        requests = httpx_mock.get_requests()
-        assert len(requests) == 3
-
-    def test_stores_credentials(self, httpx_mock, tmp_path,
-                                sample_otp_response, sample_registration_response):
+    def test_correct_request_body(self, httpx_mock, sample_otp_response):
         httpx_mock.add_response(
             method="POST",
             url=f"{HERMES_BASE}/Registration/App",
             json=sample_otp_response,
         )
+
+        auth = HermesAuth()
+        auth.request_otp("+15551234567")
+
+        req = httpx_mock.get_requests()[0]
+        body = json.loads(req.content)
+        assert body["smsNumber"] == "+15551234567"
+        assert body["platform"] == "android"
+        assert req.headers["RegistrationApiKey"] is not None
+        assert req.headers["Api-Version"] == "1.0"
+
+
+# =========================================================================== #
+# confirm_otp
+# =========================================================================== #
+
+
+class TestConfirmOtp:
+    def _make_otp_request(self, **overrides):
+        defaults = {
+            "request_id": "req-abc-123",
+            "phone_number": "+15551234567",
+            "device_name": "garmin-messenger",
+            "valid_until": "2025-06-01T12:00:00Z",
+            "attempts_remaining": 3,
+        }
+        defaults.update(overrides)
+        return OtpRequest(**defaults)
+
+    def test_happy_path(self, httpx_mock, tmp_path,
+                        sample_registration_response):
         httpx_mock.add_response(
             method="POST",
             url=f"{HERMES_BASE}/Registration/App/Confirm",
@@ -139,7 +174,23 @@ class TestLoginSms:
         )
 
         auth = HermesAuth(session_dir=str(tmp_path))
-        auth.login_sms("+15551234567", prompt_otp=lambda: "999999")
+        auth.confirm_otp(self._make_otp_request(), "123456")
+
+        assert auth.access_token == ACCESS_TOKEN
+        assert auth.refresh_token == REFRESH_TOKEN
+        assert auth.instance_id == INSTANCE_ID
+        assert auth.expires_at > time.time()
+
+    def test_stores_credentials_to_disk(self, httpx_mock, tmp_path,
+                                        sample_registration_response):
+        httpx_mock.add_response(
+            method="POST",
+            url=f"{HERMES_BASE}/Registration/App/Confirm",
+            json=sample_registration_response,
+        )
+
+        auth = HermesAuth(session_dir=str(tmp_path))
+        auth.confirm_otp(self._make_otp_request(), "999999")
 
         creds_file = tmp_path / "hermes_credentials.json"
         assert creds_file.exists()
@@ -149,13 +200,7 @@ class TestLoginSms:
         assert data["instance_id"] == INSTANCE_ID
         assert "expires_at" in data
 
-    def test_no_session_dir(self, httpx_mock, sample_otp_response,
-                            sample_registration_response):
-        httpx_mock.add_response(
-            method="POST",
-            url=f"{HERMES_BASE}/Registration/App",
-            json=sample_otp_response,
-        )
+    def test_no_session_dir(self, httpx_mock, sample_registration_response):
         httpx_mock.add_response(
             method="POST",
             url=f"{HERMES_BASE}/Registration/App/Confirm",
@@ -163,35 +208,11 @@ class TestLoginSms:
         )
 
         auth = HermesAuth()  # no session_dir
-        auth.login_sms("+15551234567", prompt_otp=lambda: "123456")
+        auth.confirm_otp(self._make_otp_request(), "123456")
         assert auth.access_token == ACCESS_TOKEN
 
-    def test_409_double_failure(self, httpx_mock, tmp_path, monkeypatch):
-        monkeypatch.setattr("garmin_messenger.auth.time.sleep", lambda _: None)
-
-        httpx_mock.add_response(
-            method="POST",
-            url=f"{HERMES_BASE}/Registration/App",
-            status_code=409,
-        )
-        httpx_mock.add_response(
-            method="POST",
-            url=f"{HERMES_BASE}/Registration/App",
-            status_code=409,
-        )
-
-        auth = HermesAuth(session_dir=str(tmp_path))
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            auth.login_sms("+15551234567", prompt_otp=lambda: "123456")
-        assert exc_info.value.response.status_code == 409
-
-    def test_correct_request_bodies(self, httpx_mock, sample_otp_response,
-                                    sample_registration_response):
-        httpx_mock.add_response(
-            method="POST",
-            url=f"{HERMES_BASE}/Registration/App",
-            json=sample_otp_response,
-        )
+    def test_correct_request_body(self, httpx_mock,
+                                  sample_registration_response):
         httpx_mock.add_response(
             method="POST",
             url=f"{HERMES_BASE}/Registration/App/Confirm",
@@ -199,48 +220,31 @@ class TestLoginSms:
         )
 
         auth = HermesAuth()
-        auth.login_sms("+15551234567", prompt_otp=lambda: "654321")
+        auth.confirm_otp(self._make_otp_request(), "654321")
 
-        requests = httpx_mock.get_requests()
+        req = httpx_mock.get_requests()[0]
+        body = json.loads(req.content)
+        assert body["requestId"] == "req-abc-123"
+        assert body["smsNumber"] == "+15551234567"
+        assert body["verificationCode"] == "654321"
+        assert body["platform"] == "android"
+        assert body["appDescription"] == "garmin-messenger"
 
-        # Stage 1: OTP request
-        otp_body = json.loads(requests[0].content)
-        assert otp_body["smsNumber"] == "+15551234567"
-        assert otp_body["platform"] == "android"
-        assert requests[0].headers["RegistrationApiKey"] is not None
-        assert requests[0].headers["Api-Version"] == "1.0"
-
-        # Stage 3: Confirm
-        confirm_body = json.loads(requests[1].content)
-        assert confirm_body["requestId"] == "req-abc-123"
-        assert confirm_body["smsNumber"] == "+15551234567"
-        assert confirm_body["verificationCode"] == "654321"
-        assert confirm_body["platform"] == "android"
-        assert confirm_body["appDescription"] == "garmin-messenger"
-
-    def test_custom_device_name(self, httpx_mock, sample_otp_response,
+    def test_custom_device_name(self, httpx_mock,
                                 sample_registration_response):
         httpx_mock.add_response(
             method="POST",
-            url=f"{HERMES_BASE}/Registration/App",
-            json=sample_otp_response,
-        )
-        httpx_mock.add_response(
-            method="POST",
             url=f"{HERMES_BASE}/Registration/App/Confirm",
             json=sample_registration_response,
         )
 
         auth = HermesAuth()
-        auth.login_sms(
-            "+15551234567",
-            prompt_otp=lambda: "654321",
-            device_name="my-laptop",
-        )
+        otp_req = self._make_otp_request(device_name="my-laptop")
+        auth.confirm_otp(otp_req, "654321")
 
-        requests = httpx_mock.get_requests()
-        confirm_body = json.loads(requests[1].content)
-        assert confirm_body["appDescription"] == "my-laptop"
+        req = httpx_mock.get_requests()[0]
+        body = json.loads(req.content)
+        assert body["appDescription"] == "my-laptop"
 
 
 # =========================================================================== #
