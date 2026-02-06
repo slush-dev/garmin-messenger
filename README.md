@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="banner.webp" alt="Garmin Messenger & InReach Connectivity Library" width="100%">
+</p>
+
 # Garmin Messenger Client
 
 **Unofficial Garmin Messenger API client for communicating with InReach satellite devices — no hardware required.**
