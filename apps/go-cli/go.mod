@@ -33,4 +33,4 @@ require (
 	golang.org/x/tools v0.33.0 // indirect
 )
 
-replace github.com/slush-dev/garmin-messenger => ../../clients/go
+replace github.com/slush-dev/garmin-messenger => ../../lib/go

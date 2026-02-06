@@ -2,7 +2,7 @@
 
 Command-line interface for Garmin Messenger (Hermes) — send, receive, and manage satellite messages from your terminal.
 
-Built on the [Python client library](../../clients/python/).
+Built on the [Python library](../../lib/python/).
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
@@ -14,15 +14,15 @@ cd garmin-messenger
 # Set up virtualenv and install dependencies
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e clients/python
-pip install -e apps/cli
+pip install -e lib/python
+pip install -e apps/python-cli
 ```
 
 Or use the Makefile:
 
 ```bash
 source .venv/bin/activate
-make build
+make build-python-lib build-python-cli
 ```
 
 ## Authentication
@@ -168,7 +168,7 @@ The contacts file can also be edited manually to set custom display names.
 ## Testing
 
 ```bash
-cd apps/cli
+cd apps/python-cli
 python -m pytest tests/ -v
 ```
 

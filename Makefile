@@ -1,4 +1,6 @@
-.PHONY: help test test-python test-cli test-go test-go-cli lint lint-python lint-cli lint-go lint-go-cli build build-python build-cli build-go proto-gen clean
+.PHONY: help test test-python test-python-lib test-python-cli test-go test-go-lib test-go-cli \
+       lint lint-python lint-python-lib lint-python-cli lint-go lint-go-lib lint-go-cli \
+       build build-python-lib build-python-cli build-go-cli proto-gen clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -8,17 +10,17 @@ help: ## Show this help
 # Test
 # ---------------------------------------------------------------------------
 
-test: test-python test-cli test-go test-go-cli ## Run all tests
+test: test-python test-go ## Run all tests
 
-test-python: ## Run Python client tests
-	cd clients/python && python -m pytest tests/ -v
+test-python: test-python-lib test-python-cli ## Run all Python tests
+test-python-lib: ## Run Python library tests
+	cd lib/python && python -m pytest tests/ -v
+test-python-cli: ## Run Python CLI tests
+	cd apps/python-cli && python -m pytest tests/ -v
 
-test-cli: ## Run CLI app tests
-	cd apps/cli && python -m pytest tests/ -v
-
-test-go: ## Run Go client tests
-	cd clients/go && go test ./... -v
-
+test-go: test-go-lib test-go-cli ## Run all Go tests
+test-go-lib: ## Run Go library tests
+	cd lib/go && go test ./... -v
 test-go-cli: ## Run Go CLI tests
 	cd apps/go-cli && go test ./... -v
 
@@ -26,17 +28,17 @@ test-go-cli: ## Run Go CLI tests
 # Lint
 # ---------------------------------------------------------------------------
 
-lint: lint-python lint-cli lint-go lint-go-cli ## Lint all code
+lint: lint-python lint-go ## Lint all code
 
-lint-python: ## Lint Python client
-	cd clients/python && python -m ruff check src/ tests/
+lint-python: lint-python-lib lint-python-cli ## Lint all Python code
+lint-python-lib: ## Lint Python library
+	cd lib/python && python -m ruff check src/ tests/
+lint-python-cli: ## Lint Python CLI
+	cd apps/python-cli && python -m ruff check src/ tests/
 
-lint-cli: ## Lint CLI app
-	cd apps/cli && python -m ruff check src/ tests/
-
-lint-go: ## Lint Go client
-	cd clients/go && go vet ./...
-
+lint-go: lint-go-lib lint-go-cli ## Lint all Go code
+lint-go-lib: ## Lint Go library
+	cd lib/go && go vet ./...
 lint-go-cli: ## Lint Go CLI
 	cd apps/go-cli && go vet ./...
 
@@ -44,23 +46,14 @@ lint-go-cli: ## Lint Go CLI
 # Build / Install
 # ---------------------------------------------------------------------------
 
-build: build-python build-cli build-go ## Build all
+build: build-python-lib build-python-cli build-go-cli ## Build all
 
-build-python: ## Install Python client in dev mode
-	cd clients/python && pip install -e ".[dev]"
-
-build-cli: ## Install CLI app in dev mode
-	cd apps/cli && pip install -e .
-
-build-go: ## Build Go CLI binary
-	cd apps/go-cli && go build -o ../../bin/garmin-messenger .
-
-# ---------------------------------------------------------------------------
-# Protobuf
-# ---------------------------------------------------------------------------
-
-proto-gen: ## Regenerate protobuf bindings for all languages
-	@echo "Proto generation not yet configured — add per-language targets in tools/proto-gen/"
+build-python-lib: ## Install Python library in dev mode
+	cd lib/python && pip install -e ".[dev]"
+build-python-cli: ## Install Python CLI in dev mode
+	cd apps/python-cli && pip install -e .
+build-go-cli: ## Build Go CLI binary
+	cd apps/go-cli && go build -o ../../build/go/garmin-messenger .
 
 # ---------------------------------------------------------------------------
 # Cleanup
@@ -71,4 +64,4 @@ clean: ## Remove build artifacts
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
-	rm -rf bin/ 2>/dev/null || true
+	rm -rf build/ 2>/dev/null || true

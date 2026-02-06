@@ -34,30 +34,30 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 ## Repository Structure
 
 ```
-├── clients/                 Client library implementations
-│   ├── python/              Python client library (complete, 231 tests)
-│   └── go/                  Go client library (complete, 94 tests)
-├── apps/                    Standalone applications
-│   ├── cli/                 Python CLI tool (complete, 263 tests)
-│   └── go-cli/              Go CLI tool (complete)
-├── tests/                   Cross-implementation test infrastructure
-│   └── fixtures/            Shared mock API response data (17 JSON files)
-├── docs/                    Protocol & API documentation
-└── tools/                   Development tooling
+├── lib/                    Library implementations
+│   ├── python/             Python library (complete, 231 tests)
+│   └── go/                 Go library (complete, 94 tests)
+├── apps/                   Standalone applications
+│   ├── python-cli/         Python CLI tool (complete, 263 tests)
+│   └── go-cli/             Go CLI tool (complete)
+├── tests/                  Cross-implementation test infrastructure
+│   └── fixtures/           Shared mock API response data (17 JSON files)
+├── docs/                   Protocol & API documentation
+└── tools/                  Development tooling
 ```
 
-## Client Implementations
+## Libraries
 
 | Language | Directory | Status | README |
 |---|---|---|---|
-| Python | [`clients/python/`](clients/python/) | Complete | **[Python Client README](clients/python/README.md)** |
-| Go | [`clients/go/`](clients/go/) | Complete | **[Go Client README](clients/go/README.md)** |
+| Python | [`lib/python/`](lib/python/) | Complete ✅ | **[Python Library README](lib/python/README.md)** |
+| Go | [`lib/go/`](lib/go/) | Complete ✅ | **[Go Library README](lib/go/README.md)** |
 
 ## Applications
 
 | App | Directory | Description |
 |---|---|---|
-| Python CLI | [`apps/cli/`](apps/cli/) | Full-featured command-line tool — **[CLI README](apps/cli/README.md)** |
+| Python CLI | [`apps/python-cli/`](apps/python-cli/) | Full-featured command-line tool — **[CLI README](apps/python-cli/README.md)** |
 | Go CLI | [`apps/go-cli/`](apps/go-cli/) | Native Go binary — **[Go CLI README](apps/go-cli/README.md)** |
 
 > Want to add an implementation or application? Contributions are welcome — see [Contributing](#contributing).
@@ -67,19 +67,19 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 ### Go CLI (single binary, no runtime)
 
 ```bash
-make build-go    # outputs bin/garmin-messenger
+make build-go-cli    # outputs build/go/garmin-messenger
 
-bin/garmin-messenger login --phone "+1234567890"
-bin/garmin-messenger conversations
-bin/garmin-messenger send --to "+1234567890" --message "Hello from base!"
-bin/garmin-messenger listen
+build/go/garmin-messenger login --phone "+1234567890"
+build/go/garmin-messenger conversations
+build/go/garmin-messenger send --to "+1234567890" --message "Hello from base!"
+build/go/garmin-messenger listen
 ```
 
 ### Python CLI
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e clients/python && pip install -e apps/cli
+pip install -e lib/python && pip install -e apps/python-cli
 
 garmin-messenger login --phone "+1234567890"
 garmin-messenger conversations
@@ -89,7 +89,7 @@ garmin-messenger listen
 
 ### Library usage
 
-See [clients/go/README.md](clients/go/README.md) (Go) or [clients/python/README.md](clients/python/README.md) (Python) for library usage examples.
+See [lib/go/README.md](lib/go/README.md) (Go) or [lib/python/README.md](lib/python/README.md) (Python) for library usage examples.
 
 ## Authentication Flow
 
@@ -145,10 +145,10 @@ make test-python
 make test-go
 
 # Build Go CLI binary
-make build-go
+make build-go-cli
 
-# Install Python client in dev mode
-make build-python
+# Install Python library in dev mode
+make build-python-lib
 
 # See all targets
 make help

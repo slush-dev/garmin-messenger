@@ -16,12 +16,12 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          pip install -e "clients/python[dev]"
-          pip install -e apps/cli
-      - name: Lint Python client
-        run: ruff check clients/python/src/ clients/python/tests/
-      - name: Lint CLI app
-        run: ruff check apps/cli/src/ apps/cli/tests/
+          pip install -e "lib/python[dev]"
+          pip install -e apps/python-cli
+      - name: Lint Python library
+        run: ruff check lib/python/src/ lib/python/tests/
+      - name: Lint Python CLI
+        run: ruff check apps/python-cli/src/ apps/python-cli/tests/
 
   test:
     runs-on: ubuntu-latest
@@ -32,12 +32,12 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          pip install -e "clients/python[dev]"
-          pip install -e apps/cli
-      - name: Test Python client
-        run: python -m pytest clients/python/tests/ -v
-      - name: Test CLI app
-        run: python -m pytest apps/cli/tests/ -v
+          pip install -e "lib/python[dev]"
+          pip install -e apps/python-cli
+      - name: Test Python library
+        run: python -m pytest lib/python/tests/ -v
+      - name: Test Python CLI
+        run: python -m pytest apps/python-cli/tests/ -v
 
   lint-go:
     runs-on: ubuntu-latest
@@ -46,8 +46,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Vet Go client
-        run: cd clients/go && go vet ./...
+      - name: Vet Go library
+        run: cd lib/go && go vet ./...
       - name: Vet Go CLI
         run: cd apps/go-cli && go vet ./...
 
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Test Go client
-        run: cd clients/go && go test ./... -v
+      - name: Test Go library
+        run: cd lib/go && go test ./... -v
       - name: Test Go CLI
         run: cd apps/go-cli && go test ./... -v
