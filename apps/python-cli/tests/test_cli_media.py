@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import UUID
 
 import yaml
-
 from garmin_messenger.models import (
     ConversationDetailModel,
     ConversationMessageModel,
@@ -15,7 +14,7 @@ from garmin_messenger.models import (
 
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MSG_ID, LAST_MSG_ID, RECIPIENT_ID, USER_ID
+from .conftest import CONV_ID, LAST_MSG_ID, MSG_ID, USER_ID
 
 MEDIA_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
