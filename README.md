@@ -136,7 +136,7 @@ make help
 
 ## Requirements
 
-- A phone number registered with the [Garmin Messenger](https://www.garmin.com/en-US/p/882559) app
+- A phone number registered with the [Garmin Messenger](https://www.garmin.com/en-CA/p/893837/) app
 - Internet connection
 - No Garmin hardware required on the client side
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MODULE, RECIPIENT_ID, USER_ID, USER_IDENTIFIER_1
+from .conftest import CONV_ID, RECIPIENT_ID, USER_ID, USER_IDENTIFIER_1
 
 
 class TestMembersHappyPath:

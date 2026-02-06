@@ -12,7 +12,6 @@ from uuid import UUID
 
 import pytest
 from click.testing import CliRunner
-
 from garmin_messenger.models import (
     ConversationDetailModel,
     ConversationMessageModel,
@@ -20,10 +19,9 @@ from garmin_messenger.models import (
     ConversationMuteDetailModel,
     DeviceInstanceMetadata,
     DeviceMetadataEntry,
-    InReachMessageMetadata,
     GetConversationsModel,
+    InReachMessageMetadata,
     MessageDeviceMetadataV2,
-    MessageStatusUpdate,
     NetworkPropertiesResponse,
     SendMessageV2Response,
     SignedUploadUrl,

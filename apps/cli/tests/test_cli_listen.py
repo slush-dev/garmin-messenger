@@ -3,21 +3,20 @@
 from __future__ import annotations
 
 import signal as signal_mod
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 from uuid import UUID
 
 import pytest
-
 from garmin_messenger.models import (
     MessageModel,
-    MessageStatus,
     MessageStatusUpdate,
     SimpleCompoundMessageId,
     UserLocation,
 )
+
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MODULE, MSG_ID, RECIPIENT_ID, STATUS_USER_UUID, USER_ID
+from .conftest import CONV_ID, MODULE, MSG_ID, STATUS_USER_UUID, USER_ID
 
 
 class TestListenSetup:
@@ -388,7 +387,9 @@ class TestListenAuth:
 class TestListenConversationName:
     """Conversation name resolution in listen."""
 
-    def _get_handlers_with_contacts(self, cli_runner, mock_auth_class, mock_signalr_class, tmp_path):
+    def _get_handlers_with_contacts(
+        self, cli_runner, mock_auth_class, mock_signalr_class, tmp_path,
+    ):
         """Invoke listen with a contacts.yaml that has conversation names."""
         import yaml as _yaml
         contacts_data = {

@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import pytest
-
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MODULE, RECIPIENT_ID, USER_ID
+from .conftest import CONV_ID, RECIPIENT_ID, USER_ID
 
 
 class TestConversationsHappyPath:

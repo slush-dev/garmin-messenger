@@ -10,7 +10,7 @@ For protocol documentation and API reference, see the [root README](../../README
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/garmin-messenger.git
+git clone https://github.com/slush-dev/garmin-messenger.git
 cd garmin-messenger/clients/python
 
 # Set up the virtual environment

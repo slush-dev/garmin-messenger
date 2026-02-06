@@ -27,5 +27,16 @@ packages = ["src/garmin_messenger_cli"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/garmin_messenger_cli/main.py" = ["E402"]
+"**/tests/*" = ["N806"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

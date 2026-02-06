@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
+from garmin_messenger.models import MediaType, UserLocation
 
 from garmin_messenger_cli.main import cli
 
-from garmin_messenger.models import MediaType, UserLocation
-
-from .conftest import CONV_ID, MODULE, MSG_ID, RECIPIENT_ID
+from .conftest import CONV_ID, MSG_ID, RECIPIENT_ID
 
 
 class TestSendHappyPath:

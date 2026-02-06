@@ -3,24 +3,18 @@
 from __future__ import annotations
 
 import yaml
-import pytest
+from garmin_messenger.models import phone_to_hermes_user_id
 
 from garmin_messenger_cli.main import cli
 
-from garmin_messenger.models import phone_to_hermes_user_id
-
 from .conftest import (
     CONV_ID,
-    MODULE,
-    MSG_ID,
-    LAST_MSG_ID,
     INSTANCE_ID,
+    MSG_ID,
     RECIPIENT_ID,
     USER_ID,
     USER_IDENTIFIER_1,
-    USER_IDENTIFIER_2,
 )
-
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -456,8 +450,13 @@ class TestSenderFieldsConsistency:
         self, cli_runner, mock_auth_class, mock_api_class, tmp_path
     ):
         """messages: from_ is a UUID (real server behavior) → sender_id = same UUID."""
-        from garmin_messenger.models import ConversationDetailModel, ConversationMetaModel, ConversationMessageModel
         from uuid import UUID as _UUID
+
+        from garmin_messenger.models import (
+            ConversationDetailModel,
+            ConversationMessageModel,
+            ConversationMetaModel,
+        )
         uuid_from = "11153808-b0a5-5f9b-bbcf-b35be7e4359e"
         detail = ConversationDetailModel(
             metaData=ConversationMetaModel(
@@ -490,9 +489,14 @@ class TestSenderFieldsConsistency:
     def test_messages_sender_phone_from_contacts(
         self, cli_runner, mock_auth_class, mock_api_class, tmp_path
     ):
-        """messages: from_ is a UUID, but address is known from sync-contacts → sender_phone shown."""
-        from garmin_messenger.models import ConversationDetailModel, ConversationMetaModel, ConversationMessageModel
+        """messages: from_ is a UUID, address known from sync-contacts."""
         from uuid import UUID as _UUID
+
+        from garmin_messenger.models import (
+            ConversationDetailModel,
+            ConversationMessageModel,
+            ConversationMetaModel,
+        )
         uuid_from = "11153808-b0a5-5f9b-bbcf-b35be7e4359e"
         phone = "+15555550100"
         contacts_data = {

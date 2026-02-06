@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import pytest
-
-from garmin_messenger.models import ConversationDetailModel, ConversationMessageModel, ConversationMetaModel, UserLocation
+from garmin_messenger.models import (
+    ConversationDetailModel,
+    ConversationMessageModel,
+    ConversationMetaModel,
+    UserLocation,
+)
 
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, LAST_MSG_ID, MODULE, MSG_ID, RECIPIENT_ID, USER_ID
+from .conftest import CONV_ID, MSG_ID, RECIPIENT_ID, USER_ID
 
 
 class TestMessagesHappyPath:

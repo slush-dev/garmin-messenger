@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MODULE
+from .conftest import CONV_ID
 
 
 class TestMutedHappyPath:
@@ -60,8 +60,9 @@ class TestMutedNeverExpiry:
     """Muted conversation without expiry shows 'never'."""
 
     def test_never_expiry(self, cli_runner, mock_auth_class, mock_api_class):
-        from garmin_messenger.models import ConversationMuteDetailModel
         from uuid import UUID
+
+        from garmin_messenger.models import ConversationMuteDetailModel
         _, api = mock_api_class
         api.get_muted_conversations.return_value = [
             ConversationMuteDetailModel(conversationId=UUID(CONV_ID), expires=None),

@@ -68,7 +68,7 @@ class TestCliGroup:
             api_inst.__exit__ = MagicMock(return_value=False)
             api_inst.get_conversations.return_value = MagicMock(conversations=[])
             MockAPI.return_value = api_inst
-            result = cli_runner.invoke(cli, ["conversations"])
+            cli_runner.invoke(cli, ["conversations"])
         # _get_auth should have been called with the default path
         call_kwargs = MockCls.call_args
         assert ".garmin-messenger" in str(call_kwargs)
@@ -81,7 +81,7 @@ class TestCliGroup:
             api_inst.__exit__ = MagicMock(return_value=False)
             api_inst.get_conversations.return_value = MagicMock(conversations=[])
             MockAPI.return_value = api_inst
-            result = cli_runner.invoke(
+            cli_runner.invoke(
                 cli, ["--session-dir", "/tmp/custom", "conversations"]
             )
         MockCls.assert_called_once_with(session_dir="/tmp/custom")
@@ -94,7 +94,7 @@ class TestCliGroup:
             api_inst.__exit__ = MagicMock(return_value=False)
             api_inst.get_conversations.return_value = MagicMock(conversations=[])
             MockAPI.return_value = api_inst
-            result = cli_runner.invoke(
+            cli_runner.invoke(
                 cli,
                 ["conversations"],
                 env={"GARMIN_SESSION_DIR": "/env/session"},

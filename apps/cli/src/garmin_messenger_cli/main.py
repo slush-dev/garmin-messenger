@@ -25,14 +25,27 @@ import yaml
 yaml.add_representer(UUID, lambda dumper, data: dumper.represent_str(str(data)))
 yaml.add_multi_representer(enum.Enum, lambda dumper, data: dumper.represent_str(data.value))
 
-from garmin_messenger.auth import HermesAuth
 from garmin_messenger.api import HermesAPI
-from garmin_messenger.models import MediaType, MessageModel, MessageStatusUpdate, SimpleCompoundMessageId, UserLocation, phone_to_hermes_user_id
+from garmin_messenger.auth import HermesAuth
+from garmin_messenger.models import (
+    MediaType,
+    MessageModel,
+    MessageStatusUpdate,
+    SimpleCompoundMessageId,
+    UserLocation,
+    phone_to_hermes_user_id,
+)
 from garmin_messenger.signalr import HermesSignalR
 
 from garmin_messenger_cli.contacts import (
-    Contacts, load_contacts, save_contacts, merge_members, merge_conversations,
-    load_addresses, save_addresses, merge_addresses,
+    Contacts,
+    load_addresses,
+    load_contacts,
+    merge_addresses,
+    merge_conversations,
+    merge_members,
+    save_addresses,
+    save_contacts,
 )
 
 log = logging.getLogger("garmin_messenger_cli")
@@ -56,7 +69,9 @@ def _resolve_member(contacts: Contacts, member_id: str | None) -> str | None:
     return None
 
 
-def _sender_fields(contacts: Contacts, from_: str | None, addresses: dict[str, str] | None = None) -> dict:
+def _sender_fields(
+    contacts: Contacts, from_: str | None, addresses: dict[str, str] | None = None,
+) -> dict:
     """Build consistent sender fields from a raw ``from_`` value.
 
     Returns a dict with ``sender`` (friendly name, or the raw identifier
@@ -82,7 +97,9 @@ def _sender_fields(contacts: Contacts, from_: str | None, addresses: dict[str, s
 
 def _yaml_out(data: object) -> None:
     """Print *data* as a YAML document to stdout."""
-    click.echo(yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip())
+    click.echo(
+        yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip()
+    )
 
 
 def _format_location(loc: UserLocation | None) -> str:
@@ -261,7 +278,10 @@ def conversations(ctx: click.Context, limit: int) -> None:
 @cli.command()
 @click.argument("conversation_id")
 @click.option("--limit", "-n", default=20, show_default=True, help="Max messages to fetch.")
-@click.option("--uuid", "show_uuid", is_flag=True, default=False, help="Show message_id and sender_id in output.")
+@click.option(
+    "--uuid", "show_uuid", is_flag=True, default=False,
+    help="Show message_id and sender_id in output.",
+)
 @_yaml_option
 @click.pass_context
 def messages(ctx: click.Context, conversation_id: str, limit: int, show_uuid: bool) -> None:
@@ -321,7 +341,8 @@ def messages(ctx: click.Context, conversation_id: str, limit: int, show_uuid: bo
             body = (m.messageBody or "")[:120]
             sent = m.sentAt.strftime("%Y-%m-%d %H:%M:%S") if m.sentAt else "?"
             if show_uuid:
-                click.echo(f"  [{sent}] ({m.messageId}) {sender}: {body}{_format_location(m.userLocation)}")
+                loc_str = _format_location(m.userLocation)
+                click.echo(f"  [{sent}] ({m.messageId}) {sender}: {body}{loc_str}")
             else:
                 click.echo(f"  [{sent}] {sender}: {body}{_format_location(m.userLocation)}")
             if m.referencePoint and m.referencePoint.latitudeDegrees is not None:
@@ -337,12 +358,20 @@ def messages(ctx: click.Context, conversation_id: str, limit: int, show_uuid: bo
 # ---------------------------------------------------------------------------
 
 @cli.command()
-@click.option("--to", "-t", "recipient", required=True, help="Recipient address (phone or user ID).")
+@click.option(
+    "--to", "-t", "recipient", required=True,
+    help="Recipient address (phone or user ID).",
+)
 @click.option("--message", "-m", "message_body", required=True, help="Message body to send.")
 @click.option("--latitude", "--lat", type=float, default=None, help="GPS latitude in degrees.")
 @click.option("--longitude", "--lon", type=float, default=None, help="GPS longitude in degrees.")
 @click.option("--elevation", type=float, default=None, help="Elevation in meters.")
-@click.option("--file", "-f", "file_path", type=click.Path(exists=True, dir_okay=False, readable=True), default=None, help="Path to a media file to attach (AVIF image or OGG audio).")
+@click.option(
+    "--file", "-f", "file_path",
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+    default=None,
+    help="Path to a media file to attach (AVIF image or OGG audio).",
+)
 @_yaml_option
 @click.pass_context
 def send(
@@ -378,11 +407,18 @@ def send(
     media_type = None
     file_data = None
     if file_path is not None:
-        ext_map = {".avif": MediaType.IMAGE_AVIF, ".ogg": MediaType.AUDIO_OGG, ".oga": MediaType.AUDIO_OGG}
+        ext_map = {
+            ".avif": MediaType.IMAGE_AVIF,
+            ".ogg": MediaType.AUDIO_OGG,
+            ".oga": MediaType.AUDIO_OGG,
+        }
         ext = os.path.splitext(file_path)[1].lower()
         media_type = ext_map.get(ext)
         if media_type is None:
-            click.echo(f"Error: Unsupported file extension '{ext}'. Supported: .avif, .ogg, .oga", err=True)
+            click.echo(
+                f"Error: Unsupported file extension '{ext}'. Supported: .avif, .ogg, .oga",
+                err=True,
+            )
             sys.exit(2)
         with open(file_path, "rb") as fh:
             file_data = fh.read()
@@ -599,7 +635,9 @@ def sync_contacts(ctx: click.Context, limit: int) -> None:
             "contacts_file": os.path.join(session_dir, "contacts.yaml"),
         })
     else:
-        click.echo(f"Synced {len(contacts.members)} members, {len(contacts.conversations)} conversations.")
+        n_members = len(contacts.members)
+        n_convos = len(contacts.conversations)
+        click.echo(f"Synced {n_members} members, {n_convos} conversations.")
         click.echo(f"Edit {os.path.join(session_dir, 'contacts.yaml')} to set friendly names.")
 
 
@@ -689,7 +727,10 @@ def device_metadata(ctx: click.Context, conversation_id: str, message_ids: tuple
 # ---------------------------------------------------------------------------
 
 @cli.command()
-@click.option("--uuid", "show_uuid", is_flag=True, default=False, help="Show conversation_id, message_id, and sender_id in output.")
+@click.option(
+    "--uuid", "show_uuid", is_flag=True, default=False,
+    help="Show conversation_id, message_id, and sender_id in output.",
+)
 @_yaml_option
 @click.pass_context
 def listen(ctx: click.Context, show_uuid: bool) -> None:
@@ -709,7 +750,7 @@ def listen(ctx: click.Context, show_uuid: bool) -> None:
             if show_uuid:
                 row["conversation_id"] = conv_id
                 row["message_id"] = msg.messageId
-            fields = _sender_fields(contacts, msg.from_)
+            fields = _sender_fields(contacts, msg.from_, addresses)
             row["sender"] = fields["sender"]
             if show_uuid and fields.get("sender_id") is not None:
                 row["sender_id"] = fields["sender_id"]
@@ -737,7 +778,7 @@ def listen(ctx: click.Context, show_uuid: bool) -> None:
         else:
             conv_id = str(msg.conversationId)
             conv_label = contacts.resolve_conversation(conv_id) or conv_id
-            fields = _sender_fields(contacts, msg.from_)
+            fields = _sender_fields(contacts, msg.from_, addresses)
             sender = fields["sender"] or "?"
             body = (msg.messageBody or "")[:120]
             click.echo(f">> [{conv_label}] {sender}: {body}{_format_location(msg.userLocation)}")

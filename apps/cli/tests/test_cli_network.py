@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from garmin_messenger.models import NetworkPropertiesResponse
-from garmin_messenger_cli.main import cli
 
-from .conftest import MODULE
+from garmin_messenger_cli.main import cli
 
 
 class TestNetworkHappyPath:

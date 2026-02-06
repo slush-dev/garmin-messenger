@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
-import pytest
-
 from garmin_messenger_cli.main import cli
 
-from .conftest import INSTANCE_ID, MODULE
+from .conftest import INSTANCE_ID
 
 
 class TestLoginHappyPath:
@@ -51,7 +47,7 @@ class TestLoginHappyPath:
 
     def test_passes_session_dir(self, cli_runner, mock_auth_class):
         MockCls, _ = mock_auth_class
-        result = cli_runner.invoke(
+        cli_runner.invoke(
             cli, ["--session-dir", "/custom/dir", "login", "--phone", "+1"]
         )
         MockCls.assert_called_once_with(session_dir="/custom/dir")
@@ -90,7 +86,7 @@ class TestLoginOptions:
 
     def test_custom_session_dir(self, cli_runner, mock_auth_class):
         MockCls, _ = mock_auth_class
-        result = cli_runner.invoke(
+        cli_runner.invoke(
             cli, ["--session-dir", "/tmp/sess", "login", "--phone", "+1"]
         )
         MockCls.assert_called_once_with(session_dir="/tmp/sess")

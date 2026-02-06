@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import UUID
 
-import pytest
 import yaml
-
 from garmin_messenger.models import (
     ConversationMetaModel,
     GetConversationsModel,
     UserInfoModel,
 )
+
 from garmin_messenger_cli.contacts import (
     Contacts,
     load_addresses,
@@ -34,7 +32,6 @@ from .conftest import (
     USER_IDENTIFIER_1,
     USER_IDENTIFIER_2,
 )
-
 
 # =========================================================================
 # Unit tests — Contacts dataclass
@@ -361,7 +358,10 @@ class TestSyncContactsCommand:
         _, api = mock_api_class
         api.get_conversations.return_value = _make_conversations_result()
         api.get_conversation_members.return_value = [
-            UserInfoModel(userIdentifier=USER_IDENTIFIER_1, address=USER_ID, friendlyName="ServerAlice"),
+            UserInfoModel(
+                userIdentifier=USER_IDENTIFIER_1, address=USER_ID,
+                friendlyName="ServerAlice",
+            ),
         ]
 
         cli_runner.invoke(cli, ["--session-dir", str(tmp_path), "sync-contacts"])
@@ -404,8 +404,14 @@ class TestSyncContactsCommand:
         _, api = mock_api_class
         api.get_conversations.return_value = _make_conversations_result()
         api.get_conversation_members.return_value = [
-            UserInfoModel(userIdentifier=USER_IDENTIFIER_1, address=USER_ID, friendlyName="Alice"),
-            UserInfoModel(userIdentifier=USER_IDENTIFIER_2, address=RECIPIENT_ID, friendlyName="Bob"),
+            UserInfoModel(
+                userIdentifier=USER_IDENTIFIER_1, address=USER_ID,
+                friendlyName="Alice",
+            ),
+            UserInfoModel(
+                userIdentifier=USER_IDENTIFIER_2, address=RECIPIENT_ID,
+                friendlyName="Bob",
+            ),
         ]
 
         cli_runner.invoke(cli, ["--session-dir", str(tmp_path), "sync-contacts"])

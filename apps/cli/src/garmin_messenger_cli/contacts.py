@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
 import yaml
 
@@ -28,14 +27,14 @@ class Contacts:
     members: dict[str, str] = field(default_factory=dict)
     conversations: dict[str, str] = field(default_factory=dict)
 
-    def resolve_member(self, member_id: Optional[str]) -> Optional[str]:
+    def resolve_member(self, member_id: str | None) -> str | None:
         """Return the friendly name for *member_id*, or ``None`` if unknown/empty."""
         if member_id is None:
             return None
         name = self.members.get(member_id, "")
         return name if name else None
 
-    def resolve_conversation(self, conv_id: Optional[str]) -> Optional[str]:
+    def resolve_conversation(self, conv_id: str | None) -> str | None:
         """Return the friendly name for *conv_id*, or ``None`` if unknown/empty."""
         if conv_id is None:
             return None
@@ -49,7 +48,7 @@ def load_contacts(session_dir: str) -> Contacts:
     if not os.path.isfile(path):
         return Contacts()
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
         if not isinstance(data, dict):
             return Contacts()
@@ -122,7 +121,7 @@ def load_addresses(session_dir: str) -> dict[str, str]:
     if not os.path.isfile(path):
         return {}
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
         if not isinstance(data, dict):
             return {}

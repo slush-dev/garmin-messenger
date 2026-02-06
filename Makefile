@@ -1,4 +1,4 @@
-.PHONY: help test test-python test-cli test-go lint lint-python lint-go build build-python build-cli proto-gen clean
+.PHONY: help test test-python test-cli test-go lint lint-python lint-cli lint-go build build-python build-cli proto-gen clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -23,10 +23,13 @@ test-go: ## Run Go client tests
 # Lint
 # ---------------------------------------------------------------------------
 
-lint: lint-python ## Lint all code
+lint: lint-python lint-cli ## Lint all code
 
 lint-python: ## Lint Python client
 	cd clients/python && python -m ruff check src/ tests/
+
+lint-cli: ## Lint CLI app
+	cd apps/cli && python -m ruff check src/ tests/
 
 lint-go: ## Lint Go client
 	cd clients/go && go vet ./...

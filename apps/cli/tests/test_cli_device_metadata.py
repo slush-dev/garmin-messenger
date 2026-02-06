@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from garmin_messenger.models import MessageDeviceMetadataV2
 
 from garmin_messenger_cli.main import cli
 
-from .conftest import CONV_ID, MODULE, MSG_ID
+from .conftest import CONV_ID, MSG_ID
 
 
 class TestDeviceMetadataHappyPath:
