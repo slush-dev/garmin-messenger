@@ -30,6 +30,16 @@ func TestNewHermesAuth_Options(t *testing.T) {
 	assert.Equal(t, "/tmp/test", a.SessionDir)
 }
 
+func TestWithPnsHandle_Default(t *testing.T) {
+	a := NewHermesAuth()
+	assert.Equal(t, DefaultPnsHandle, a.PnsHandle())
+}
+
+func TestWithPnsHandle_Custom(t *testing.T) {
+	a := NewHermesAuth(WithPnsHandle("custom-token"))
+	assert.Equal(t, "custom-token", a.PnsHandle())
+}
+
 func TestTokenExpired_NoToken(t *testing.T) {
 	a := NewHermesAuth()
 	assert.True(t, a.TokenExpired())
@@ -72,8 +82,8 @@ func TestRequestOTP_HappyPath(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(NewAppRegistrationResponse{
-			RequestID: "req-abc-123",
-			ValidUntil: ptr("2025-06-01T12:00:00Z"),
+			RequestID:         "req-abc-123",
+			ValidUntil:        ptr("2025-06-01T12:00:00Z"),
 			AttemptsRemaining: ptr(3),
 		})
 	}))
@@ -171,6 +181,92 @@ func TestConfirmOTP_HappyPath(t *testing.T) {
 	assert.Equal(t, "new-access-token", creds["access_token"])
 	assert.Equal(t, "new-refresh-token", creds["refresh_token"])
 	assert.Equal(t, testInstanceID, creds["instance_id"])
+}
+
+func TestConfirmOTP_CustomPnsHandle(t *testing.T) {
+	sessionDir := t.TempDir()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/Registration/App/Confirm", r.URL.Path)
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, RegistrationAPIKey, r.Header.Get("RegistrationApiKey"))
+
+		var body ConfirmAppRegistrationBody
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		assert.Equal(t, "req-123", body.RequestID)
+		assert.Equal(t, "+15551234567", body.SmsNumber)
+		assert.Equal(t, "123456", body.VerificationCode)
+		assert.Equal(t, "android", body.Platform)
+		assert.Equal(t, "custom-fcm-token", body.PnsHandle)
+		assert.Equal(t, PnsEnvironment, body.PnsEnvironment)
+		assert.Equal(t, "garmin-messenger", body.AppDescription)
+		assert.True(t, body.OptInForSms)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(AppRegistrationResponse{
+			InstanceID: testInstanceID,
+			AccessAndRefreshToken: AccessAndRefreshToken{
+				AccessToken:  "new-access-token",
+				RefreshToken: "new-refresh-token",
+				ExpiresIn:    3600,
+			},
+		})
+	}))
+	defer server.Close()
+
+	a := NewHermesAuth(
+		WithHermesBase(server.URL),
+		WithSessionDir(sessionDir),
+		WithPnsHandle("custom-fcm-token"),
+	)
+	otpReq := &OtpRequest{
+		RequestID:   "req-123",
+		PhoneNumber: "+15551234567",
+		DeviceName:  "garmin-messenger",
+	}
+
+	err := a.ConfirmOTP(context.Background(), otpReq, "123456")
+	require.NoError(t, err)
+}
+
+func TestUpdatePnsHandle_HappyPath(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/Registration/App", r.URL.Path)
+		assert.Equal(t, "PATCH", r.Method)
+		assert.Equal(t, "Bearer access-token", r.Header.Get("Authorization"))
+		assert.Equal(t, "1.0", r.Header.Get("Api-Version"))
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		var body UpdateAppPnsHandleBody
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		assert.Equal(t, "new-fcm-token", body.PnsHandle)
+		assert.Equal(t, PnsEnvironment, body.PnsEnvironment)
+		assert.Equal(t, "garmin-messenger", body.AppDescription)
+
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	a := NewHermesAuth(WithHermesBase(server.URL))
+	a.AccessToken = "access-token"
+	a.ExpiresAt = float64(time.Now().Unix()) + 3600
+
+	err := a.UpdatePnsHandle(context.Background(), "new-fcm-token")
+	require.NoError(t, err)
+}
+
+func TestUpdatePnsHandle_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("boom"))
+	}))
+	defer server.Close()
+
+	a := NewHermesAuth(WithHermesBase(server.URL))
+	a.AccessToken = "access-token"
+	a.ExpiresAt = float64(time.Now().Unix()) + 3600
+
+	err := a.UpdatePnsHandle(context.Background(), "new-fcm-token")
+	require.Error(t, err)
 }
 
 func TestResume_HappyPath(t *testing.T) {
@@ -342,6 +438,27 @@ func TestAccessTokenFactory_RefreshesExpired(t *testing.T) {
 	token, err := a.AccessTokenFactory(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "factory-refreshed", token)
+}
+
+func TestDeleteAppRegistration_PathEscape(t *testing.T) {
+	var requestedRawPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedRawPath = r.URL.RawPath
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	a := NewHermesAuth(WithHermesBase(server.URL))
+	a.AccessToken = "access-token"
+	a.ExpiresAt = float64(time.Now().Unix()) + 3600
+
+	// A malicious instanceID with path traversal should be escaped
+	err := a.DeleteAppRegistration(context.Background(), "../User")
+	require.NoError(t, err)
+
+	// RawPath preserves %-encoding; the slash in "../User" must be escaped
+	assert.Contains(t, requestedRawPath, "%2F")
+	assert.NotContains(t, requestedRawPath, "/Registration/User")
 }
 
 func TestAPIError_Error(t *testing.T) {

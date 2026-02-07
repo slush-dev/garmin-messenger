@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,9 @@ const (
 	// RegistrationAPIKey is the registration API key used by the Android app.
 	RegistrationAPIKey = "?E2PFAzUzKx!S&1k1D"
 
-	// DefaultPnsHandle is a placeholder FCM registration token.
+	// DefaultPnsHandle is a placeholder FCM registration token used during
+	// OTP registration when no real FCM token is available. It is overridden
+	// by WithPnsHandle when the client has registered with FCM.
 	DefaultPnsHandle = "cXr1bp_PSqaKHFG8W4vLHi:APA91bH8kL2xNmQpZ9vYtD5n3R7fUwXoEjKm4sCgBpV6qI0hA1dWzOyFuN8rT3lMxJvQ2bGnYk9wRcHiP7eDsUaZoL5fXtW4mBjK0vNq6SyRgCpAhD1iOuE3wTlMx"
 
 	// PnsEnvironment is the push notification environment.
@@ -76,6 +79,13 @@ func WithLogger(logger *slog.Logger) HermesAuthOption {
 	}
 }
 
+// WithPnsHandle overrides the FCM token used during registration.
+func WithPnsHandle(handle string) HermesAuthOption {
+	return func(a *HermesAuth) {
+		a.pnsHandle = handle
+	}
+}
+
 // HermesAuth manages the full authentication lifecycle for Hermes messaging API.
 type HermesAuth struct {
 	HermesBase   string
@@ -84,6 +94,7 @@ type HermesAuth struct {
 	RefreshToken string
 	InstanceID   string
 	ExpiresAt    float64 // Unix timestamp
+	pnsHandle    string
 
 	httpClient *http.Client
 	logger     *slog.Logger
@@ -96,6 +107,7 @@ func NewHermesAuth(opts ...HermesAuthOption) *HermesAuth {
 		HermesBase: DefaultHermesBase,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		logger:     slog.Default(),
+		pnsHandle:  DefaultPnsHandle,
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -110,7 +122,7 @@ func (a *HermesAuth) RequestOTP(ctx context.Context, phone, deviceName string) (
 	url := a.HermesBase + "/Registration/App"
 	body := NewAppRegistrationBody{
 		SmsNumber: phone,
-		Platform:  "android",
+		Platform:  "android", // Android-native FCM
 	}
 	bodyBytes, _ := json.Marshal(body)
 
@@ -170,8 +182,8 @@ func (a *HermesAuth) ConfirmOTP(ctx context.Context, otpReq *OtpRequest, otpCode
 		RequestID:        otpReq.RequestID,
 		SmsNumber:        otpReq.PhoneNumber,
 		VerificationCode: otpCode,
-		Platform:         "android",
-		PnsHandle:        DefaultPnsHandle,
+		Platform:         "android", // Android-native FCM
+		PnsHandle:        a.pnsHandle,
 		PnsEnvironment:   PnsEnvironment,
 		AppDescription:   otpReq.DeviceName,
 		OptInForSms:      true,
@@ -202,6 +214,126 @@ func (a *HermesAuth) ConfirmOTP(ctx context.Context, otpReq *OtpRequest, otpCode
 	a.logger.Debug("Registration successful", "instanceId", reg.InstanceID)
 	a.storeCredentials(reg.InstanceID, &reg.AccessAndRefreshToken)
 
+	return nil
+}
+
+// PnsHandle returns the current PNS handle value.
+func (a *HermesAuth) PnsHandle() string {
+	return a.pnsHandle
+}
+
+// GetRegistrations lists all registered devices/apps for the current account.
+func (a *HermesAuth) GetRegistrations(ctx context.Context) (map[string]interface{}, error) {
+	url := a.HermesBase + "/Registration"
+
+	headers, err := a.Headers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting auth headers: %w", err)
+	}
+	headers.Set("Api-Version", "1.0")
+
+	resp, err := a.doRequest(ctx, "GET", url, headers, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err := checkResponse(resp); err != nil {
+		return nil, fmt.Errorf("getting registrations: %w", err)
+	}
+
+	var registrations map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&registrations); err != nil {
+		return nil, fmt.Errorf("decoding registrations: %w", err)
+	}
+
+	return registrations, nil
+}
+
+// DeleteAppRegistration deletes a specific app registration by instance ID.
+func (a *HermesAuth) DeleteAppRegistration(ctx context.Context, instanceID string) error {
+	a.logger.Debug("Deleting app registration", "instanceId", instanceID)
+
+	reqURL := a.HermesBase + "/Registration/App/" + url.PathEscape(instanceID)
+
+	headers, err := a.Headers(ctx)
+	if err != nil {
+		return fmt.Errorf("getting auth headers: %w", err)
+	}
+	headers.Set("Api-Version", "1.0")
+
+	resp, err := a.doRequest(ctx, "DELETE", reqURL, headers, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete app registration: HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	a.logger.Debug("App registration deleted successfully")
+	return nil
+}
+
+// DeleteUserRegistration deletes the entire user registration (all devices/apps).
+func (a *HermesAuth) DeleteUserRegistration(ctx context.Context) error {
+	a.logger.Warn("Deleting entire user registration - this will remove ALL devices/apps")
+
+	url := a.HermesBase + "/Registration/User"
+
+	headers, err := a.Headers(ctx)
+	if err != nil {
+		return fmt.Errorf("getting auth headers: %w", err)
+	}
+	headers.Set("Api-Version", "1.0")
+
+	resp, err := a.doRequest(ctx, "DELETE", url, headers, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete user registration: HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	a.logger.Debug("User registration deleted successfully")
+	return nil
+}
+
+// UpdatePnsHandle sends a PATCH to Registration/App to update the FCM push notification token.
+func (a *HermesAuth) UpdatePnsHandle(ctx context.Context, pnsHandle string) error {
+	a.logger.Debug("Updating PNS handle")
+
+	url := a.HermesBase + "/Registration/App"
+	body := UpdateAppPnsHandleBody{
+		PnsHandle:      pnsHandle,
+		PnsEnvironment: PnsEnvironment,
+		AppDescription: "garmin-messenger",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	headers, err := a.Headers(ctx)
+	if err != nil {
+		return fmt.Errorf("getting auth headers: %w", err)
+	}
+	headers.Set("Api-Version", "1.0")
+	headers.Set("Content-Type", "application/json")
+
+	resp, err := a.doRequest(ctx, "PATCH", url, headers, bodyBytes)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if err := checkResponse(resp); err != nil {
+		return fmt.Errorf("updating PNS handle: %w", err)
+	}
+
+	a.logger.Debug("PNS handle updated successfully")
 	return nil
 }
 

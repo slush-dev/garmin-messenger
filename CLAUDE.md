@@ -78,6 +78,7 @@ go test ./... -v
 | `lib/go/api.go` | Hermes REST API client (HermesAPI) |
 | `lib/go/signalr.go` | SignalR WebSocket client for real-time events |
 | `lib/go/otauuid.go` | OTA UUID generator (Garmin's custom bit layout) |
+| `lib/go/fcm/` | Android-native FCM push notifications (subpackage) |
 
 ### Testing
 
@@ -100,6 +101,11 @@ garmin-messenger conversations
 garmin-messenger messages <CONVERSATION_ID>
 garmin-messenger send --to "+1234567890" --message "Hello"
 garmin-messenger listen
+
+# Registration management (clean up stale FCM tokens)
+garmin-messenger registrations list
+garmin-messenger registrations delete <instance-id>
+garmin-messenger registrations cleanup  # delete ALL registrations
 ```
 
 ### Build
@@ -107,6 +113,16 @@ garmin-messenger listen
 ```bash
 make build-go-cli   # outputs build/go/garmin-messenger
 ```
+
+### Registration Management
+
+The CLI provides commands to manage device/app registrations on the Hermes server:
+
+- `registrations list` - List all registered devices and apps
+- `registrations delete <instance-id>` - Delete a specific registration
+- `registrations cleanup` - Delete ALL app registrations (requires confirmation)
+
+**Intentional omission**: `DeleteUserRegistration` (DELETE /Registration/User) is implemented in the library (`lib/go/auth.go`) but **deliberately NOT exposed** in the CLI. This endpoint deletes the entire user registration including all devices, apps, and associated data. It is too destructive for CLI exposure and should only be used programmatically with explicit safeguards.
 
 ## Build Orchestration
 
