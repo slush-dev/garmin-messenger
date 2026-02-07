@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/philippseith/signalr v0.8.0
 	github.com/stretchr/testify v1.10.0
+	google.golang.org/protobuf v1.36.6
 )
 
 require (

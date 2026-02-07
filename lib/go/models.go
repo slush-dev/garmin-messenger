@@ -2,6 +2,7 @@ package garminmessenger
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -72,20 +73,20 @@ const (
 
 // UserLocation represents GPS coordinates and motion data.
 type UserLocation struct {
-	LatitudeDegrees                *float64 `json:"latitudeDegrees,omitempty"`
-	LongitudeDegrees               *float64 `json:"longitudeDegrees,omitempty"`
-	ElevationMeters                *float64 `json:"elevationMeters,omitempty"`
-	GroundVelocityMetersPerSecond  *float64 `json:"groundVelocityMetersPerSecond,omitempty"`
-	CourseDegrees                  *float64 `json:"courseDegrees,omitempty"`
+	LatitudeDegrees               *float64 `json:"latitudeDegrees,omitempty"`
+	LongitudeDegrees              *float64 `json:"longitudeDegrees,omitempty"`
+	ElevationMeters               *float64 `json:"elevationMeters,omitempty"`
+	GroundVelocityMetersPerSecond *float64 `json:"groundVelocityMetersPerSecond,omitempty"`
+	CourseDegrees                 *float64 `json:"courseDegrees,omitempty"`
 }
 
 // StatusReceipt represents a delivery/read receipt for a message.
 type StatusReceipt struct {
-	UserID                string         `json:"userId"`
-	AppOrDeviceInstanceID *string        `json:"appOrDeviceInstanceId,omitempty"`
-	DeviceType            *DeviceType    `json:"deviceType,omitempty"`
-	MessageStatus         MessageStatus  `json:"messageStatus"`
-	UpdatedAt             *time.Time     `json:"updatedAt,omitempty"`
+	UserID                string        `json:"userId"`
+	AppOrDeviceInstanceID *string       `json:"appOrDeviceInstanceId,omitempty"`
+	DeviceType            *DeviceType   `json:"deviceType,omitempty"`
+	MessageStatus         MessageStatus `json:"messageStatus"`
+	UpdatedAt             *time.Time    `json:"updatedAt,omitempty"`
 }
 
 // SimpleCompoundMessageId identifies a message within a conversation.
@@ -103,16 +104,16 @@ type MediaMetadata struct {
 
 // SignedUploadUrl contains AWS S3 presigned upload parameters.
 type SignedUploadUrl struct {
-	UploadUrl           string  `json:"uploadUrl"`
-	Key                 *string `json:"key,omitempty"`
-	XAmzStorageClass    *string `json:"x-amz-storage-class,omitempty"`
-	XAmzDate            *string `json:"x-amz-date,omitempty"`
-	XAmzSignature       *string `json:"x-amz-signature,omitempty"`
-	XAmzAlgorithm       *string `json:"x-amz-algorithm,omitempty"`
-	XAmzCredential      *string `json:"x-amz-credential,omitempty"`
-	Policy              *string `json:"policy,omitempty"`
+	UploadUrl            string  `json:"uploadUrl"`
+	Key                  *string `json:"key,omitempty"`
+	XAmzStorageClass     *string `json:"x-amz-storage-class,omitempty"`
+	XAmzDate             *string `json:"x-amz-date,omitempty"`
+	XAmzSignature        *string `json:"x-amz-signature,omitempty"`
+	XAmzAlgorithm        *string `json:"x-amz-algorithm,omitempty"`
+	XAmzCredential       *string `json:"x-amz-credential,omitempty"`
+	Policy               *string `json:"policy,omitempty"`
 	XAmzMetaMediaQuality *string `json:"x-amz-meta-media-quality,omitempty"`
-	ContentType         *string `json:"content-type,omitempty"`
+	ContentType          *string `json:"content-type,omitempty"`
 }
 
 // UnmarshalJSON handles case-insensitive content-type field variants.
@@ -187,6 +188,53 @@ type MessageModel struct {
 	OtaUuid          *uuid.UUID         `json:"otaUuid,omitempty"`
 	FromUnitID       *string            `json:"fromUnitId,omitempty"`
 	IntendedUnitID   *string            `json:"intendedUnitId,omitempty"`
+}
+
+// UnmarshalJSON handles both REST API field names (messageId, conversationId)
+// and FCM push notification field names (messageGuid, conversationGuid).
+// It also handles empty string UUIDs from FCM (treats them as nil).
+func (m *MessageModel) UnmarshalJSON(data []byte) error {
+	type Alias MessageModel
+	aux := &struct {
+		MessageGuid       *string `json:"messageGuid"`
+		ConversationGuid  *string `json:"conversationGuid"`
+		ParentMessageGuid *string `json:"parentMessageGuid"`
+		*Alias
+	}{
+		Alias: (*Alias)(m),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	// FCM push notifications use *Guid field names, REST API uses *Id field names.
+	// Prefer Guid variants if present (they will override the Id variants that were
+	// already parsed into the embedded Alias).
+	// Handle empty strings as nil (FCM sends "" for missing parent messages).
+	if aux.MessageGuid != nil && *aux.MessageGuid != "" {
+		parsed, err := uuid.Parse(*aux.MessageGuid)
+		if err != nil {
+			return fmt.Errorf("parsing messageGuid: %w", err)
+		}
+		m.MessageID = parsed
+	}
+	if aux.ConversationGuid != nil && *aux.ConversationGuid != "" {
+		parsed, err := uuid.Parse(*aux.ConversationGuid)
+		if err != nil {
+			return fmt.Errorf("parsing conversationGuid: %w", err)
+		}
+		m.ConversationID = parsed
+	}
+	if aux.ParentMessageGuid != nil && *aux.ParentMessageGuid != "" {
+		parsed, err := uuid.Parse(*aux.ParentMessageGuid)
+		if err != nil {
+			return fmt.Errorf("parsing parentMessageGuid: %w", err)
+		}
+		m.ParentMessageID = &parsed
+	}
+
+	return nil
 }
 
 // ConversationMessageModel is a message within a conversation detail response.
@@ -294,10 +342,10 @@ type SendMessageRequest struct {
 
 // SendMessageV2Response is the response from POST Message/Send v2.
 type SendMessageV2Response struct {
-	MessageID      uuid.UUID        `json:"messageId"`
-	ConversationID uuid.UUID        `json:"conversationId"`
+	MessageID       uuid.UUID        `json:"messageId"`
+	ConversationID  uuid.UUID        `json:"conversationId"`
 	SignedUploadUrl *SignedUploadUrl `json:"signedUploadUrl,omitempty"`
-	ImageQuality   *string          `json:"imageQuality,omitempty"`
+	ImageQuality    *string          `json:"imageQuality,omitempty"`
 }
 
 // UpdateMessageStatusResponse is the response from status update endpoints.
@@ -338,7 +386,7 @@ type UpdateMediaRequest struct {
 // UpdateMediaResponse is the response from POST Message/UpdateMedia.
 type UpdateMediaResponse struct {
 	SignedUploadUrl SignedUploadUrl `json:"signedUploadUrl"`
-	ImageQuality   *string         `json:"imageQuality,omitempty"`
+	ImageQuality    *string         `json:"imageQuality,omitempty"`
 }
 
 // MediaAttachmentDownloadUrlResponse is the response from GET Message/Media/DownloadUrl.
@@ -357,8 +405,8 @@ type InReachMessageMetadata struct {
 // DeviceInstanceMetadata is per-device metadata for a physical device.
 type DeviceInstanceMetadata struct {
 	DeviceInstanceID       *uuid.UUID               `json:"deviceInstanceId,omitempty"`
-	IMEI                   *int64                    `json:"imei,omitempty"`
-	InReachMessageMetadata []InReachMessageMetadata  `json:"inReachMessageMetadata,omitempty"`
+	IMEI                   *int64                   `json:"imei,omitempty"`
+	InReachMessageMetadata []InReachMessageMetadata `json:"inReachMessageMetadata,omitempty"`
 }
 
 // DeviceMetadataEntry is the inner deviceMetadata object.
@@ -376,8 +424,15 @@ type MessageDeviceMetadataV2 struct {
 
 // NetworkPropertiesResponse is the response from GET NetworkInfo/Properties.
 type NetworkPropertiesResponse struct {
-	DataConstrained          bool `json:"dataConstrained"`
-	EnablesPremiumMessaging   bool `json:"enablesPremiumMessaging"`
+	DataConstrained         bool `json:"dataConstrained"`
+	EnablesPremiumMessaging bool `json:"enablesPremiumMessaging"`
+}
+
+// UpdateAppPnsHandleBody is the request body for PATCH Registration/App.
+type UpdateAppPnsHandleBody struct {
+	PnsHandle      string `json:"pnsHandle"`
+	PnsEnvironment string `json:"pnsEnvironment"`
+	AppDescription string `json:"appDescription"`
 }
 
 // ---------------------------------------------------------------------------
@@ -399,9 +454,9 @@ type NewAppRegistrationBody struct {
 
 // NewAppRegistrationResponse is the response from POST Registration/App.
 type NewAppRegistrationResponse struct {
-	RequestID          string `json:"requestId"`
-	ValidUntil         *string `json:"validUntil,omitempty"`
-	AttemptsRemaining  *int    `json:"attemptsRemaining,omitempty"`
+	RequestID         string  `json:"requestId"`
+	ValidUntil        *string `json:"validUntil,omitempty"`
+	AttemptsRemaining *int    `json:"attemptsRemaining,omitempty"`
 }
 
 // OtpRequest is a pending OTP request returned by HermesAuth.RequestOTP.
@@ -433,9 +488,9 @@ type SmsOptInResult struct {
 
 // AppRegistrationResponse is the response from POST Registration/App/Confirm.
 type AppRegistrationResponse struct {
-	InstanceID           string                 `json:"instanceId"`
+	InstanceID            string                `json:"instanceId"`
 	AccessAndRefreshToken AccessAndRefreshToken `json:"accessAndRefreshToken"`
-	SmsOptInResult       *SmsOptInResult        `json:"smsOptInResult,omitempty"`
+	SmsOptInResult        *SmsOptInResult       `json:"smsOptInResult,omitempty"`
 }
 
 // RefreshAuthBody is the request for POST Registration/App/Refresh.

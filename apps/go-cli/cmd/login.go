@@ -4,12 +4,42 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	gm "github.com/slush-dev/garmin-messenger"
+	"github.com/slush-dev/garmin-messenger/fcm"
 	"github.com/spf13/cobra"
 )
+
+type loginPNSUpdater interface {
+	UpdatePnsHandle(ctx context.Context, pnsHandle string) error
+}
+
+type loginFCMClient interface {
+	Register(ctx context.Context) (string, error)
+}
+
+var newLoginFCMClient = func(sessionDir string) loginFCMClient {
+	return fcm.NewClient(sessionDir)
+}
+
+func registerFCMForLogin(ctx context.Context, auth loginPNSUpdater, sessionDir string, useYAML bool, stdout, stderr io.Writer) {
+	// FCM registration — non-fatal; falls back to dummy token on failure
+	fcm := newLoginFCMClient(sessionDir)
+	fcmToken, fcmErr := fcm.Register(ctx)
+	if fcmErr != nil {
+		fmt.Fprintf(stderr, "Warning: FCM registration failed: %v\n", fcmErr)
+		fmt.Fprintln(stderr, "Push notifications will not work. SignalR real-time still available.")
+	} else {
+		if err := auth.UpdatePnsHandle(ctx, fcmToken); err != nil {
+			fmt.Fprintf(stderr, "Warning: Failed to update push notification token: %v\n", err)
+		} else if !useYAML {
+			fmt.Fprintln(stdout, "FCM push notifications registered.")
+		}
+	}
+}
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
@@ -53,6 +83,8 @@ var loginCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, "Authentication failed — no access token.")
 			os.Exit(1)
 		}
+
+		registerFCMForLogin(ctx, auth, sessionDir, useYAML, os.Stdout, os.Stderr)
 
 		if useYAML {
 			yamlOut(map[string]string{

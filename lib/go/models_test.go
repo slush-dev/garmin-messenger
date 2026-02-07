@@ -574,6 +574,87 @@ func TestDateTimeParsing(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// MessageModel field name variants (REST API vs FCM)
+// ---------------------------------------------------------------------------
+
+func TestMessageModel_UnmarshalJSON_RestAPI(t *testing.T) {
+	// REST API uses messageId, conversationId, parentMessageId
+	data := `{
+		"messageId": "11111111-2222-3333-4444-555555555555",
+		"conversationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"parentMessageId": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+		"messageBody": "Hello from REST API"
+	}`
+
+	var msg MessageModel
+	require.NoError(t, json.Unmarshal([]byte(data), &msg))
+
+	assert.Equal(t, uuid.MustParse("11111111-2222-3333-4444-555555555555"), msg.MessageID)
+	assert.Equal(t, uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), msg.ConversationID)
+	require.NotNil(t, msg.ParentMessageID)
+	assert.Equal(t, uuid.MustParse("66666666-7777-8888-9999-aaaaaaaaaaaa"), *msg.ParentMessageID)
+	require.NotNil(t, msg.MessageBody)
+	assert.Equal(t, "Hello from REST API", *msg.MessageBody)
+}
+
+func TestMessageModel_UnmarshalJSON_FCM(t *testing.T) {
+	// FCM push notifications use messageGuid, conversationGuid, parentMessageGuid
+	data := `{
+		"messageGuid": "11111111-2222-3333-4444-555555555555",
+		"conversationGuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"parentMessageGuid": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+		"messageBody": "Hello from FCM"
+	}`
+
+	var msg MessageModel
+	require.NoError(t, json.Unmarshal([]byte(data), &msg))
+
+	assert.Equal(t, uuid.MustParse("11111111-2222-3333-4444-555555555555"), msg.MessageID)
+	assert.Equal(t, uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), msg.ConversationID)
+	require.NotNil(t, msg.ParentMessageID)
+	assert.Equal(t, uuid.MustParse("66666666-7777-8888-9999-aaaaaaaaaaaa"), *msg.ParentMessageID)
+	require.NotNil(t, msg.MessageBody)
+	assert.Equal(t, "Hello from FCM", *msg.MessageBody)
+}
+
+func TestMessageModel_UnmarshalJSON_GuidOverridesId(t *testing.T) {
+	// When both variants are present, Guid fields should take precedence
+	data := `{
+		"messageId": "00000000-0000-0000-0000-000000000000",
+		"messageGuid": "11111111-2222-3333-4444-555555555555",
+		"conversationId": "00000000-0000-0000-0000-000000000000",
+		"conversationGuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"messageBody": "Guid wins"
+	}`
+
+	var msg MessageModel
+	require.NoError(t, json.Unmarshal([]byte(data), &msg))
+
+	// Guid fields should override Id fields
+	assert.Equal(t, uuid.MustParse("11111111-2222-3333-4444-555555555555"), msg.MessageID)
+	assert.Equal(t, uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), msg.ConversationID)
+}
+
+func TestMessageModel_UnmarshalJSON_EmptyStringGuid(t *testing.T) {
+	// FCM sends empty strings for missing UUIDs (e.g., no parent message)
+	data := `{
+		"messageGuid": "11111111-2222-3333-4444-555555555555",
+		"conversationGuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"parentMessageGuid": "",
+		"messageBody": "No parent"
+	}`
+
+	var msg MessageModel
+	require.NoError(t, json.Unmarshal([]byte(data), &msg))
+
+	assert.Equal(t, uuid.MustParse("11111111-2222-3333-4444-555555555555"), msg.MessageID)
+	assert.Equal(t, uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), msg.ConversationID)
+	assert.Nil(t, msg.ParentMessageID) // Empty string should be treated as nil
+	require.NotNil(t, msg.MessageBody)
+	assert.Equal(t, "No parent", *msg.MessageBody)
+}
+
+// ---------------------------------------------------------------------------
 // NetworkPropertiesResponse defaults
 // ---------------------------------------------------------------------------
 
