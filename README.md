@@ -127,6 +127,7 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 | `registrations delete` | ✅ | ❌ |
 | `registrations cleanup` | ✅ | ❌ |
 | `fcm-register` (debug) | ✅ | ❌ |
+| `mcp` (MCP server for LLM integration) | ✅ | ❌ |
 | `--yaml` output on all commands | ✅ | ✅ |
 | `--version` | ✅ | ❌ |
 

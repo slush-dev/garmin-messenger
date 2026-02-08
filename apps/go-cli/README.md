@@ -150,6 +150,34 @@ garmin-messenger login --phone "+1234567890"
 garmin-messenger login --phone "+1234567890" --device-name "My Laptop"
 ```
 
+### mcp
+
+Start an MCP (Model Context Protocol) server on stdio for LLM integration with Claude Desktop, Claude Code, and other MCP clients.
+
+```bash
+garmin-messenger mcp
+garmin-messenger mcp --verbose    # debug logging to stderr
+```
+
+**Tools:** `login_request_otp`, `login_confirm_otp`, `send_message`, `send_media_message`, `mark_as_read`, `download_media`, `sync_contacts`, `listen`, `stop`
+
+**Resources:** `garmin://status`, `garmin://conversations`, `garmin://conversations/{id}/messages`, `garmin://conversations/{id}/members`, `garmin://contacts`
+
+Configure in Claude Code (no manual install needed):
+
+```bash
+claude mcp add --transport stdio garmin-messenger -- go run github.com/slush-dev/garmin-messenger/apps/go-cli@latest mcp
+```
+
+Or if you don't have Go runtime, download the binary and configure:
+
+```bash
+# Linux (amd64) — for other platforms see Releases page
+curl -Lo garmin-messenger https://github.com/slush-dev/garmin-messenger/releases/latest/download/garmin-messenger-linux-amd64
+chmod +x garmin-messenger
+claude mcp add garmin-messenger -- ./garmin-messenger mcp
+```
+
 ## Global Options
 
 All commands accept these options:
