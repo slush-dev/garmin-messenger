@@ -976,15 +976,15 @@ def listen(ctx: click.Context, show_uuid: bool) -> None:
     sr.on_message(on_msg)
     sr.on_status_update(on_status)
     sr.on_nonconversational_message(on_nonconv)
-    sr.on_open(lambda: click.echo("SignalR connected."))
-    sr.on_close(lambda: click.echo("SignalR disconnected."))
+    sr.on_open(lambda: click.echo("SignalR connected.", err=True))
+    sr.on_close(lambda: click.echo("SignalR disconnected.", err=True))
     sr.on_error(lambda e: click.echo(f"SignalR error: {e}", err=True))
 
     sr.start()
-    click.echo("Listening for messages (Ctrl+C to stop) ...")
+    click.echo("Listening for messages (Ctrl+C to stop) ...", err=True)
 
     def _shutdown(sig, frame):
-        click.echo("\nShutting down ...")
+        click.echo("\nShutting down ...", err=True)
         sr.stop()
         sys.exit(0)
 
