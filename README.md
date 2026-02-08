@@ -40,32 +40,95 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 
 ```
 ├── lib/                    Library implementations
-│   ├── python/             Python library (complete, 231 tests)
-│   └── go/                 Go library (complete, 94 tests)
+│   ├── go/                 Go library (complete, 141 tests)
+│   └── python/             Python library (complete, 231 tests)
 ├── apps/                   Standalone applications
-│   ├── python-cli/         Python CLI tool (complete, 285 tests)
-│   └── go-cli/             Go CLI tool (complete)
+│   ├── go-cli/             Go CLI tool (complete)
+│   └── python-cli/         Python CLI tool (complete, 285 tests)
 ├── tests/                  Cross-implementation test infrastructure
 │   └── fixtures/           Shared mock API response data (17 JSON files)
 ├── docs/                   Protocol & API documentation
 └── tools/                  Development tooling
 ```
 
-## Libraries
+## Implementations
 
-| Language | Directory | Status | README |
-|---|---|---|---|
-| Python | [`lib/python/`](lib/python/) | Complete ✅ | **[Python Library README](lib/python/README.md)** |
-| Go | [`lib/go/`](lib/go/) | Complete ✅ | **[Go Library README](lib/go/README.md)** |
-
-## Applications
-
-| App | Directory | Description |
+| Component | Directory | README |
 |---|---|---|
-| Python CLI | [`apps/python-cli/`](apps/python-cli/) | Full-featured command-line tool — **[CLI README](apps/python-cli/README.md)** |
-| Go CLI | [`apps/go-cli/`](apps/go-cli/) | Native Go binary — **[Go CLI README](apps/go-cli/README.md)** |
+| Go library | [`lib/go/`](lib/go/) | **[Go Library README](lib/go/README.md)** |
+| Python library | [`lib/python/`](lib/python/) | **[Python Library README](lib/python/README.md)** |
+| Go CLI | [`apps/go-cli/`](apps/go-cli/) | **[Go CLI README](apps/go-cli/README.md)** |
+| Python CLI | [`apps/python-cli/`](apps/python-cli/) | **[Python CLI README](apps/python-cli/README.md)** |
 
 > Want to add an implementation or application? Contributions are welcome — see [Contributing](#contributing).
+
+### Library Feature Matrix
+
+| Feature | Go | Python |
+|---|:---:|:---:|
+| **Authentication** | | |
+| SMS OTP registration | ✅ | ✅ |
+| Token auto-refresh | ✅ | ✅ |
+| Session persistence (save/resume) | ✅ | ✅ |
+| **REST API** | | |
+| List conversations | ✅ | ✅ |
+| Conversation detail (messages) | ✅ | ✅ |
+| Conversation members | ✅ | ✅ |
+| Send message (text + location) | ✅ | ✅ |
+| Send media message (AVIF, OGG) | ✅ | ✅ |
+| Download media | ✅ | ✅ |
+| Upload media (presigned S3 POST) | ✅ | ✅ |
+| Message status (read/delivered) | ✅ | ✅ |
+| Batch status updates | ✅ | ✅ |
+| Mute/unmute conversations | ✅ | ✅ |
+| Block/unblock users | ✅ | ✅ |
+| Account capabilities | ✅ | ✅ |
+| Network properties (Iridium) | ✅ | ✅ |
+| Device metadata (IMEI, satellite) | ✅ | ✅ |
+| **Real-Time (SignalR WebSocket)** | | |
+| Receive messages | ✅ | ✅ |
+| Status updates | ✅ | ✅ |
+| Mute/block/notification events | ✅ | ✅ |
+| Non-conversational messages | ✅ | ✅ |
+| Mark as delivered/read | ✅ | ✅ |
+| Query network properties | ✅ | ✅ |
+| Auto-reconnect with backoff | ✅ | ✅ |
+| **Push Notifications (FCM)** | | |
+| Android-native FCM registration | ✅ | ❌ |
+| MCS persistent connection | ✅ | ❌ |
+| Push notification events | ✅ | ❌ |
+| **Registration Management** | | |
+| List app/device registrations | ✅ | ❌ |
+| Delete app registration | ✅ | ❌ |
+| Delete user registration | ✅ | ❌ |
+| Update PNS handle (FCM token) | ✅ | ❌ |
+| **Utilities** | | |
+| Phone → UUID conversion | ✅ | ✅ |
+| OTA UUID generation | ✅ | ✅ |
+
+### CLI Feature Matrix
+
+| Command | Go | Python |
+|---|:---:|:---:|
+| `login` | ✅ | ✅ |
+| `login` auto-registers FCM | ✅ | ❌ |
+| `conversations` | ✅ | ✅ |
+| `messages` | ✅ | ✅ |
+| `send` (text + location + media) | ✅ | ✅ |
+| `listen` (SignalR real-time) | ✅ | ✅ |
+| `listen` FCM catch-up for missed messages | ✅ | ❌ |
+| `media` (download attachment) | ✅ | ✅ |
+| `members` | ✅ | ✅ |
+| `mute` / `muted` | ✅ | ✅ |
+| `sync-contacts` | ✅ | ✅ |
+| `network` | ✅ | ✅ |
+| `device-metadata` | ✅ | ✅ |
+| `registrations list` | ✅ | ❌ |
+| `registrations delete` | ✅ | ❌ |
+| `registrations cleanup` | ✅ | ❌ |
+| `fcm-register` (debug) | ✅ | ❌ |
+| `--yaml` output on all commands | ✅ | ✅ |
+| `--version` | ✅ | ❌ |
 
 ## Quick Start
 
@@ -96,7 +159,7 @@ garmin-messenger media CONVERSATION_ID MESSAGE_ID    # download attachment
 
 ### Library usage
 
-See [lib/go/README.md](lib/go/README.md) (Go) or [lib/python/README.md](lib/python/README.md) (Python) for library usage examples.
+See [lib/go/README.md](lib/go/README.md) (Go) and [lib/python/README.md](lib/python/README.md) (Python) for library usage examples.
 
 ## Authentication Flow
 
@@ -145,11 +208,11 @@ make test
 # Lint all code
 make lint
 
-# Run only Python tests
-make test-python
-
 # Run only Go tests
 make test-go
+
+# Run only Python tests
+make test-python
 
 # Build Go CLI binary
 make build-go-cli
@@ -196,7 +259,7 @@ Yes. Garmin Messenger supports messaging between app users (phone-to-phone) and 
 
 Contributions are welcome! Particularly:
 
-- **New language implementations** — Rust, TypeScript/Node.js, C
+- **New language implementations** — Rust, C, TypeScript/Node.js
 - **Applications** — CLI tools, chat bots, bridges to other platforms
 - **Documentation** — Improvements to API docs, examples, and guides
 - **Test infrastructure** — Conformance tests, mock server, fixtures
@@ -213,4 +276,4 @@ This is an unofficial, community-built client. It is not affiliated with, endors
 
 ---
 
-**Keywords:** Garmin Messenger API, Garmin InReach API client, InReach satellite messenger, send message to InReach, Garmin Messenger Python library, Garmin Messenger Go library, InReach two-way messaging, Garmin satellite communication SDK, InReach Mini 2 API, Garmin Messenger protocol, Hermes API, satellite messenger integration, InReach automation, Garmin Messenger bot, InReach REST API, Garmin Messenger WebSocket, Garmin inReach SDK
+**Keywords:** Garmin Messenger API, Garmin InReach API client, InReach satellite messenger, send message to InReach, Garmin Messenger Go library, Garmin Messenger Python library, InReach two-way messaging, Garmin satellite communication SDK, InReach Mini 2 API, Garmin Messenger protocol, Hermes API, satellite messenger integration, InReach automation, Garmin Messenger bot, InReach REST API, Garmin Messenger WebSocket, Garmin inReach SDK
