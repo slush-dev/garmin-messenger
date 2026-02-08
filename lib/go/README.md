@@ -29,6 +29,7 @@ import gm "github.com/slush-dev/garmin-messenger"
 |---|---|
 | `github.com/google/uuid` | UUID generation and parsing |
 | `github.com/philippseith/signalr` | Microsoft SignalR WebSocket client |
+| `google.golang.org/protobuf` | Protocol Buffers for GCM/MCS communication |
 
 ## Library Usage
 
@@ -221,6 +222,39 @@ results, err := api.UpdateMessageStatuses(ctx, updates)
 updated, err := api.GetUpdatedStatuses(ctx, since, gm.WithStatusLimit(100))
 ```
 
+### Push Notifications (FCM)
+
+The library includes a standalone `FCMClient` that receives push notifications from Google's Firebase Cloud Messaging infrastructure using Android-native registration. It operates independently from the REST API and SignalR clients — the CLI orchestrates all three together during `login` (registration) and `listen` (real-time messages).
+
+**Architecture**: Registration is a 3-step process — GCM checkin (get device credentials), GCM register (get FCM token), then register the token with Hermes via `UpdatePnsHandle`. Listening connects to Google's MCS (Mobile Connection Server) over TLS and receives messages as plaintext AppData.
+
+```go
+fcm := gm.NewFCMClient("~/.garmin-messenger",
+    gm.WithFCMLogger(slog.Default()),
+)
+
+// Register with FCM (persists credentials to disk)
+token, err := fcm.Register(ctx)
+
+// Register the FCM token with Hermes
+err = auth.UpdatePnsHandle(ctx, token)
+
+// Listen for push notifications (blocks until ctx is cancelled)
+fcm.OnMessage(func(msg gm.FCMNewMessage) {
+    fmt.Printf("Push: %s from %s\n", deref(msg.MessageBody), deref(msg.From))
+})
+fcm.OnConnected(func() { fmt.Println("MCS connected") })
+fcm.OnDisconnected(func() { fmt.Println("MCS disconnected") })
+fcm.OnError(func(err error) { fmt.Printf("FCM error: %v\n", err) })
+
+err = fcm.Listen(ctx)
+```
+
+Event types:
+- `FCMNewMessage` — new incoming message (wraps `MessageModel`)
+- `FCMNonconversationalMessage` — device event (e.g. SOS, tracking)
+- `FCMDeviceAccountUpdate` — device account change
+
 ### Phone Number to User ID
 
 ```go
@@ -247,6 +281,10 @@ All API responses are parsed into typed Go structs. See [`models.go`](models.go)
 | `MessageStatus` | Enum: `Sent`, `Delivered`, `Read`, `Processing`, etc. |
 | `MediaType` | Enum: `ImageAvif`, `AudioOgg` |
 | `HermesMessageType` | Enum: `Unknown`, `MapShare`, `ReferencePoint` |
+| `FCMCredentials` | Persisted Android-native FCM registration state |
+| `FCMNewMessage` | Push notification: new incoming message |
+| `FCMNonconversationalMessage` | Push notification: device event (SOS, tracking) |
+| `FCMDeviceAccountUpdate` | Push notification: device account change |
 
 ## API Reference
 
@@ -278,19 +316,34 @@ All API responses are parsed into typed Go structs. See [`models.go`](models.go)
 | **Device & Network** | |
 | `GetMessageDeviceMetadata()` | Get satellite device info for messages |
 | `GetNetworkProperties()` | Get Iridium network status |
+| **Push Notifications (FCMClient)** | |
+| `Register()` | Android-native FCM registration (GCM checkin + register) |
+| `Listen()` | Connect to MCS and receive push notifications |
+| `OnMessage()` | Register callback for new messages |
+| `OnNonconversationalMessage()` | Register callback for device events |
+| `OnDeviceAccountUpdate()` | Register callback for account changes |
+| **Registration (HermesAuth)** | |
+| `UpdatePnsHandle()` | Register FCM token with Hermes server |
 
 ## Project Structure
 
 ```
 lib/go/
-├── go.mod            # Module: github.com/slush-dev/garmin-messenger
-├── doc.go            # Package documentation
-├── models.go         # All structs, enums, and JSON deserialization (42 types)
-├── auth.go           # SMS OTP authentication and token management
-├── api.go            # REST API client (net/http)
-├── signalr.go        # Real-time WebSocket client (SignalR)
-├── otauuid.go        # Garmin OTA UUID generator (custom bit layout)
-└── *_test.go         # 94 unit tests across 5 test files
+├── go.mod              # Module: github.com/slush-dev/garmin-messenger
+├── doc.go              # Package documentation
+├── models.go           # All structs, enums, and JSON deserialization
+├── auth.go             # SMS OTP authentication and token management
+├── api.go              # REST API client (net/http)
+├── signalr.go          # Real-time WebSocket client (SignalR)
+├── fcm.go              # FCM push notification client (registration + MCS listener)
+├── gcm.go              # Android GCM checkin and registration
+├── mcs.go              # MCS protocol client (Google's push connection server)
+├── android_device.go   # Android device fingerprint for GCM registration
+├── otauuid.go          # Garmin OTA UUID generator (custom bit layout)
+├── internal/checkinpb/ # Protobuf: GCM checkin messages
+├── internal/mcspb/     # Protobuf: MCS protocol messages
+├── proto/              # Protobuf source definitions
+└── *_test.go           # 141 unit tests across 9 test files
 ```
 
 ## Testing
@@ -300,7 +353,7 @@ cd lib/go
 go test ./... -v
 ```
 
-94 tests across 5 test files covering models, API, SignalR, authentication, and OTA UUID generation.
+141 tests across 9 test files covering models, API, SignalR, FCM/GCM/MCS, authentication, and OTA UUID generation.
 
 ## Requirements
 
