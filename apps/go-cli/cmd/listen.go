@@ -93,10 +93,10 @@ var listenCmd = &cobra.Command{
 		})
 
 		sr.OnOpen(func() {
-			fmt.Println("SignalR connected.")
+			fmt.Fprintln(os.Stderr, "SignalR connected.")
 		})
 		sr.OnClose(func() {
-			fmt.Println("SignalR disconnected.")
+			fmt.Fprintln(os.Stderr, "SignalR disconnected.")
 		})
 		sr.OnError(func(err error) {
 			fmt.Fprintf(os.Stderr, "SignalR error: %v\n", err)
@@ -122,7 +122,7 @@ var listenCmd = &cobra.Command{
 			if _, err := os.Stat(fcmCredentialsPath); err == nil {
 				fcmClient := fcm.NewClient(sessionDir)
 				if _, err := fcmClient.Register(ctx); err == nil {
-					fmt.Println("Catching up on missed messages via FCM...")
+					fmt.Fprintln(os.Stderr, "Catching up on missed messages via FCM...")
 					setDedupEnabled(true)
 
 					var catchupCount atomic.Int32
@@ -133,7 +133,7 @@ var listenCmd = &cobra.Command{
 						}
 					})
 					fcmClient.OnConnected(func() {
-						fmt.Println("MCS connected.")
+						fmt.Fprintln(os.Stderr, "MCS connected.")
 					})
 					fcmClient.OnError(func(err error) {
 						fmt.Fprintf(os.Stderr, "FCM error: %v\n", err)
@@ -165,7 +165,7 @@ var listenCmd = &cobra.Command{
 						setDedupEnabled(false)
 						clearDedup()
 						if signalRStarted {
-							fmt.Println("\nShutting down ...")
+							fmt.Fprintln(os.Stderr, "\nShutting down ...")
 							sr.Stop()
 						}
 						return nil
@@ -177,7 +177,7 @@ var listenCmd = &cobra.Command{
 					<-mcsDone
 					setDedupEnabled(false)
 					clearDedup()
-					fmt.Printf("Caught up on %d missed message(s).\n", catchupCount.Load())
+					fmt.Fprintf(os.Stderr, "Caught up on %d missed message(s).\n", catchupCount.Load())
 				} else {
 					fmt.Fprintf(os.Stderr, "FCM catch-up unavailable: %v\n", err)
 				}
@@ -192,9 +192,9 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("Listening for messages (Ctrl+C to stop) ...")
+		fmt.Fprintln(os.Stderr, "Listening for messages (Ctrl+C to stop) ...")
 		<-ctx.Done()
-		fmt.Println("\nShutting down ...")
+		fmt.Fprintln(os.Stderr, "\nShutting down ...")
 		sr.Stop()
 		return nil
 	},

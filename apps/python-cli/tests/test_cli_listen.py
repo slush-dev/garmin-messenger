@@ -191,7 +191,7 @@ class TestListenHandlers:
         )
         on_open()
         captured = capsys.readouterr()
-        assert "connected" in captured.out.lower()
+        assert "connected" in captured.err.lower()
 
     def test_on_close_output(
         self, cli_runner, mock_auth_class, mock_signalr_class, capsys
@@ -201,7 +201,7 @@ class TestListenHandlers:
         )
         on_close()
         captured = capsys.readouterr()
-        assert "disconnected" in captured.out.lower()
+        assert "disconnected" in captured.err.lower()
 
     def test_on_error_output(
         self, cli_runner, mock_auth_class, mock_signalr_class, capsys
