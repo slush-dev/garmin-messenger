@@ -32,6 +32,7 @@ type GarminMCPServer struct {
 	listening     bool
 	listenCancel  context.CancelFunc
 	sr            *gm.HermesSignalR
+
 }
 
 // New creates a new GarminMCPServer. It attempts non-fatal auth resume
@@ -40,7 +41,10 @@ func New(sessionDir, version string, logger *slog.Logger) *GarminMCPServer {
 	s := mcp.NewServer(&mcp.Implementation{
 		Name:    "garmin-messenger",
 		Version: version,
-	}, nil)
+	}, &mcp.ServerOptions{
+		SubscribeHandler:   func(context.Context, *mcp.SubscribeRequest) error { return nil },
+		UnsubscribeHandler: func(context.Context, *mcp.UnsubscribeRequest) error { return nil },
+	})
 
 	g := &GarminMCPServer{
 		server:     s,
