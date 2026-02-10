@@ -21,6 +21,27 @@ type AndroidDeviceInfo struct {
 
 	// ChromeVersion is the Chrome browser version (for compatibility)
 	ChromeVersion string
+
+	// Hardware is the hardware name (Build.HARDWARE), usually same as Device
+	Hardware string
+
+	// Brand is the device brand (Build.BRAND), e.g. "google"
+	Brand string
+
+	// Manufacturer is the device manufacturer (Build.MANUFACTURER), e.g. "Google"
+	Manufacturer string
+
+	// Product is the product name (Build.PRODUCT), usually same as Device
+	Product string
+
+	// Bootloader is the bootloader version string
+	Bootloader string
+
+	// Radio is the radio firmware version (Build.getRadioVersion())
+	Radio string
+
+	// BuildTime is the build timestamp (Build.TIME / 1000, seconds since epoch)
+	BuildTime int64
 }
 
 // DefaultAndroidDevice returns a credible Pixel 7 device configuration
@@ -43,8 +64,21 @@ func DefaultAndroidDevice() AndroidDeviceInfo {
 		GMSVersion: 241516037,
 
 		// Pixel 7 device info
-		Device: "panther",
-		Model:  "Pixel 7",
+		Device:   "panther",
+		Model:    "Pixel 7",
+		Hardware: "panther",
+
+		// Brand and manufacturer
+		Brand:        "google",
+		Manufacturer: "Google",
+		Product:      "panther",
+
+		// Bootloader and radio versions from Pixel 7 factory image
+		Bootloader: "slider-1.2-9819352",
+		Radio:      "g5300g-230511-230925-B-10484716",
+
+		// Build.TIME / 1000 for TQ3A.230805.001 (approx August 5, 2023)
+		BuildTime: 1691193600,
 
 		// Chrome 120.0.6099.144 (stable version from ~December 2023)
 		ChromeVersion: "120.0.6099.144",

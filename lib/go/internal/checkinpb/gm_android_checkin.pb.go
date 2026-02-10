@@ -295,9 +295,175 @@ func (x *ChromeBuildProto) GetChannel() ChromeBuildProto_Channel {
 	return ChromeBuildProto_CHANNEL_STABLE
 }
 
+// Android device build information, sent as part of the checkin request.
+// Corresponds to android.os.Build fields on the device.
+type AndroidBuildProto struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Build.FINGERPRINT e.g. "google/panther/panther:13/TQ3A.230805.001/10316531:user/release-keys"
+	Fingerprint *string `protobuf:"bytes,1,opt,name=fingerprint" json:"fingerprint,omitempty"`
+	// Build.HARDWARE e.g. "panther"
+	Hardware *string `protobuf:"bytes,2,opt,name=hardware" json:"hardware,omitempty"`
+	// Build.BRAND e.g. "google"
+	Brand *string `protobuf:"bytes,3,opt,name=brand" json:"brand,omitempty"`
+	// Build.getRadioVersion() e.g. "g5300g-230511-230925-B-10484716"
+	Radio *string `protobuf:"bytes,4,opt,name=radio" json:"radio,omitempty"`
+	// Build.BOOTLOADER e.g. "slider-1.2-9819352"
+	Bootloader *string `protobuf:"bytes,5,opt,name=bootloader" json:"bootloader,omitempty"`
+	// Client identifier, typically "android-google"
+	ClientId *string `protobuf:"bytes,6,opt,name=client_id,json=clientId" json:"client_id,omitempty"`
+	// Build.TIME / 1000 (build timestamp in seconds since epoch)
+	Time *int64 `protobuf:"varint,7,opt,name=time" json:"time,omitempty"`
+	// Google Play Services version code
+	PackageVersionCode *int32 `protobuf:"varint,8,opt,name=package_version_code,json=packageVersionCode" json:"package_version_code,omitempty"`
+	// Build.DEVICE e.g. "panther"
+	Device *string `protobuf:"bytes,9,opt,name=device" json:"device,omitempty"`
+	// Build.VERSION.SDK_INT e.g. 33
+	SdkVersion *int32 `protobuf:"varint,10,opt,name=sdk_version,json=sdkVersion" json:"sdk_version,omitempty"`
+	// Build.MODEL e.g. "Pixel 7"
+	Model *string `protobuf:"bytes,11,opt,name=model" json:"model,omitempty"`
+	// Build.MANUFACTURER e.g. "Google"
+	Manufacturer *string `protobuf:"bytes,12,opt,name=manufacturer" json:"manufacturer,omitempty"`
+	// Build.PRODUCT e.g. "panther"
+	Product *string `protobuf:"bytes,13,opt,name=product" json:"product,omitempty"`
+	// Whether device was OTA-installed
+	OtaInstalled  *bool `protobuf:"varint,14,opt,name=ota_installed,json=otaInstalled" json:"ota_installed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AndroidBuildProto) Reset() {
+	*x = AndroidBuildProto{}
+	mi := &file_gm_android_checkin_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AndroidBuildProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AndroidBuildProto) ProtoMessage() {}
+
+func (x *AndroidBuildProto) ProtoReflect() protoreflect.Message {
+	mi := &file_gm_android_checkin_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AndroidBuildProto.ProtoReflect.Descriptor instead.
+func (*AndroidBuildProto) Descriptor() ([]byte, []int) {
+	return file_gm_android_checkin_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AndroidBuildProto) GetFingerprint() string {
+	if x != nil && x.Fingerprint != nil {
+		return *x.Fingerprint
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetHardware() string {
+	if x != nil && x.Hardware != nil {
+		return *x.Hardware
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetBrand() string {
+	if x != nil && x.Brand != nil {
+		return *x.Brand
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetRadio() string {
+	if x != nil && x.Radio != nil {
+		return *x.Radio
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetBootloader() string {
+	if x != nil && x.Bootloader != nil {
+		return *x.Bootloader
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetClientId() string {
+	if x != nil && x.ClientId != nil {
+		return *x.ClientId
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetTime() int64 {
+	if x != nil && x.Time != nil {
+		return *x.Time
+	}
+	return 0
+}
+
+func (x *AndroidBuildProto) GetPackageVersionCode() int32 {
+	if x != nil && x.PackageVersionCode != nil {
+		return *x.PackageVersionCode
+	}
+	return 0
+}
+
+func (x *AndroidBuildProto) GetDevice() string {
+	if x != nil && x.Device != nil {
+		return *x.Device
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetSdkVersion() int32 {
+	if x != nil && x.SdkVersion != nil {
+		return *x.SdkVersion
+	}
+	return 0
+}
+
+func (x *AndroidBuildProto) GetModel() string {
+	if x != nil && x.Model != nil {
+		return *x.Model
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetManufacturer() string {
+	if x != nil && x.Manufacturer != nil {
+		return *x.Manufacturer
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetProduct() string {
+	if x != nil && x.Product != nil {
+		return *x.Product
+	}
+	return ""
+}
+
+func (x *AndroidBuildProto) GetOtaInstalled() bool {
+	if x != nil && x.OtaInstalled != nil {
+		return *x.OtaInstalled
+	}
+	return false
+}
+
 // Information sent by the device in a "checkin" request.
 type AndroidCheckinProto struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Android device build information (required for Android-native checkins).
+	Build *AndroidBuildProto `protobuf:"bytes,1,opt,name=build" json:"build,omitempty"`
 	// Miliseconds since the Unix epoch of the device's last successful checkin.
 	LastCheckinMsec *int64 `protobuf:"varint,2,opt,name=last_checkin_msec,json=lastCheckinMsec" json:"last_checkin_msec,omitempty"`
 	// The current MCC+MNC of the mobile device's current cell.
@@ -333,7 +499,7 @@ const (
 
 func (x *AndroidCheckinProto) Reset() {
 	*x = AndroidCheckinProto{}
-	mi := &file_gm_android_checkin_proto_msgTypes[1]
+	mi := &file_gm_android_checkin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -345,7 +511,7 @@ func (x *AndroidCheckinProto) String() string {
 func (*AndroidCheckinProto) ProtoMessage() {}
 
 func (x *AndroidCheckinProto) ProtoReflect() protoreflect.Message {
-	mi := &file_gm_android_checkin_proto_msgTypes[1]
+	mi := &file_gm_android_checkin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +524,14 @@ func (x *AndroidCheckinProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AndroidCheckinProto.ProtoReflect.Descriptor instead.
 func (*AndroidCheckinProto) Descriptor() ([]byte, []int) {
-	return file_gm_android_checkin_proto_rawDescGZIP(), []int{1}
+	return file_gm_android_checkin_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AndroidCheckinProto) GetBuild() *AndroidBuildProto {
+	if x != nil {
+		return x.Build
+	}
+	return nil
 }
 
 func (x *AndroidCheckinProto) GetLastCheckinMsec() int64 {
@@ -431,8 +604,28 @@ const file_gm_android_checkin_proto_rawDesc = "" +
 	"\fCHANNEL_BETA\x10\x02\x12\x0f\n" +
 	"\vCHANNEL_DEV\x10\x03\x12\x12\n" +
 	"\x0eCHANNEL_CANARY\x10\x04\x12\x13\n" +
-	"\x0fCHANNEL_UNKNOWN\x10\x05\"\xd0\x02\n" +
-	"\x13AndroidCheckinProto\x12*\n" +
+	"\x0fCHANNEL_UNKNOWN\x10\x05\"\xb2\x03\n" +
+	"\x11AndroidBuildProto\x12 \n" +
+	"\vfingerprint\x18\x01 \x01(\tR\vfingerprint\x12\x1a\n" +
+	"\bhardware\x18\x02 \x01(\tR\bhardware\x12\x14\n" +
+	"\x05brand\x18\x03 \x01(\tR\x05brand\x12\x14\n" +
+	"\x05radio\x18\x04 \x01(\tR\x05radio\x12\x1e\n" +
+	"\n" +
+	"bootloader\x18\x05 \x01(\tR\n" +
+	"bootloader\x12\x1b\n" +
+	"\tclient_id\x18\x06 \x01(\tR\bclientId\x12\x12\n" +
+	"\x04time\x18\a \x01(\x03R\x04time\x120\n" +
+	"\x14package_version_code\x18\b \x01(\x05R\x12packageVersionCode\x12\x16\n" +
+	"\x06device\x18\t \x01(\tR\x06device\x12\x1f\n" +
+	"\vsdk_version\x18\n" +
+	" \x01(\x05R\n" +
+	"sdkVersion\x12\x14\n" +
+	"\x05model\x18\v \x01(\tR\x05model\x12\"\n" +
+	"\fmanufacturer\x18\f \x01(\tR\fmanufacturer\x12\x18\n" +
+	"\aproduct\x18\r \x01(\tR\aproduct\x12#\n" +
+	"\rota_installed\x18\x0e \x01(\bR\fotaInstalled\"\x8b\x03\n" +
+	"\x13AndroidCheckinProto\x129\n" +
+	"\x05build\x18\x01 \x01(\v2#.gm_checkin_proto.AndroidBuildProtoR\x05build\x12*\n" +
 	"\x11last_checkin_msec\x18\x02 \x01(\x03R\x0flastCheckinMsec\x12#\n" +
 	"\rcell_operator\x18\x06 \x01(\tR\fcellOperator\x12!\n" +
 	"\fsim_operator\x18\a \x01(\tR\vsimOperator\x12\x18\n" +
@@ -461,24 +654,26 @@ func file_gm_android_checkin_proto_rawDescGZIP() []byte {
 }
 
 var file_gm_android_checkin_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_gm_android_checkin_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_gm_android_checkin_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gm_android_checkin_proto_goTypes = []any{
 	(DeviceType)(0),                // 0: gm_checkin_proto.DeviceType
 	(ChromeBuildProto_Platform)(0), // 1: gm_checkin_proto.ChromeBuildProto.Platform
 	(ChromeBuildProto_Channel)(0),  // 2: gm_checkin_proto.ChromeBuildProto.Channel
 	(*ChromeBuildProto)(nil),       // 3: gm_checkin_proto.ChromeBuildProto
-	(*AndroidCheckinProto)(nil),    // 4: gm_checkin_proto.AndroidCheckinProto
+	(*AndroidBuildProto)(nil),      // 4: gm_checkin_proto.AndroidBuildProto
+	(*AndroidCheckinProto)(nil),    // 5: gm_checkin_proto.AndroidCheckinProto
 }
 var file_gm_android_checkin_proto_depIdxs = []int32{
 	1, // 0: gm_checkin_proto.ChromeBuildProto.platform:type_name -> gm_checkin_proto.ChromeBuildProto.Platform
 	2, // 1: gm_checkin_proto.ChromeBuildProto.channel:type_name -> gm_checkin_proto.ChromeBuildProto.Channel
-	0, // 2: gm_checkin_proto.AndroidCheckinProto.type:type_name -> gm_checkin_proto.DeviceType
-	3, // 3: gm_checkin_proto.AndroidCheckinProto.chrome_build:type_name -> gm_checkin_proto.ChromeBuildProto
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 2: gm_checkin_proto.AndroidCheckinProto.build:type_name -> gm_checkin_proto.AndroidBuildProto
+	0, // 3: gm_checkin_proto.AndroidCheckinProto.type:type_name -> gm_checkin_proto.DeviceType
+	3, // 4: gm_checkin_proto.AndroidCheckinProto.chrome_build:type_name -> gm_checkin_proto.ChromeBuildProto
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_gm_android_checkin_proto_init() }
@@ -492,7 +687,7 @@ func file_gm_android_checkin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gm_android_checkin_proto_rawDesc), len(file_gm_android_checkin_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

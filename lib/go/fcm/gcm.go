@@ -31,15 +31,34 @@ type gcmCredentials struct {
 // gcmCheckin performs an Android-native GCM checkin. If androidID and
 // securityToken are non-zero, this is a re-checkin with existing credentials.
 func gcmCheckin(ctx context.Context, httpClient *http.Client, androidID, securityToken uint64, device AndroidDeviceInfo) (uint64, uint64, error) {
+	clientID := "android-google"
 	checkin := &checkinpb.AndroidCheckinProto{
+		Build: &checkinpb.AndroidBuildProto{
+			Fingerprint:        proto.String(device.BuildFingerprint),
+			Hardware:           proto.String(device.Hardware),
+			Brand:              proto.String(device.Brand),
+			Radio:              proto.String(device.Radio),
+			Bootloader:         proto.String(device.Bootloader),
+			ClientId:           proto.String(clientID),
+			Time:               proto.Int64(device.BuildTime),
+			PackageVersionCode: proto.Int32(int32(device.GMSVersion)),
+			Device:             proto.String(device.Device),
+			SdkVersion:         proto.Int32(int32(device.SDKVersion)),
+			Model:              proto.String(device.Model),
+			Manufacturer:       proto.String(device.Manufacturer),
+			Product:            proto.String(device.Product),
+			OtaInstalled:       proto.Bool(false),
+		},
 		Type: checkinpb.DeviceType_DEVICE_ANDROID_OS.Enum(),
-		// Android-native: no ChromeBuild, this represents a real Android device
 	}
 
 	req := &checkinpb.AndroidCheckinRequest{
-		Checkin:  checkin,
-		Version:  proto.Int32(3),
-		Fragment: proto.Int32(0),
+		Checkin:          checkin,
+		Version:          proto.Int32(3),
+		Fragment:         proto.Int32(0),
+		Locale:           proto.String("en_US"),
+		TimeZone:         proto.String("America/New_York"),
+		UserSerialNumber: proto.Int32(0),
 	}
 
 	if androidID != 0 {
@@ -123,6 +142,8 @@ func gcmRegister(ctx context.Context, httpClient *http.Client, androidID, securi
 	}
 	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("AidLogin %d:%d", androidID, securityToken))
+	httpReq.Header.Set("User-Agent", fmt.Sprintf("Android-GCM/1.5 (%s %s)", device.Device, device.Model))
+	httpReq.Header.Set("app", garminAppPackage)
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {

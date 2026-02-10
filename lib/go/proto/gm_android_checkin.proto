@@ -42,8 +42,57 @@ message ChromeBuildProto {
   optional Channel channel = 3;
 }
 
+// Android device build information, sent as part of the checkin request.
+// Corresponds to android.os.Build fields on the device.
+message AndroidBuildProto {
+  // Build.FINGERPRINT e.g. "google/panther/panther:13/TQ3A.230805.001/10316531:user/release-keys"
+  optional string fingerprint = 1;
+
+  // Build.HARDWARE e.g. "panther"
+  optional string hardware = 2;
+
+  // Build.BRAND e.g. "google"
+  optional string brand = 3;
+
+  // Build.getRadioVersion() e.g. "g5300g-230511-230925-B-10484716"
+  optional string radio = 4;
+
+  // Build.BOOTLOADER e.g. "slider-1.2-9819352"
+  optional string bootloader = 5;
+
+  // Client identifier, typically "android-google"
+  optional string client_id = 6;
+
+  // Build.TIME / 1000 (build timestamp in seconds since epoch)
+  optional int64 time = 7;
+
+  // Google Play Services version code
+  optional int32 package_version_code = 8;
+
+  // Build.DEVICE e.g. "panther"
+  optional string device = 9;
+
+  // Build.VERSION.SDK_INT e.g. 33
+  optional int32 sdk_version = 10;
+
+  // Build.MODEL e.g. "Pixel 7"
+  optional string model = 11;
+
+  // Build.MANUFACTURER e.g. "Google"
+  optional string manufacturer = 12;
+
+  // Build.PRODUCT e.g. "panther"
+  optional string product = 13;
+
+  // Whether device was OTA-installed
+  optional bool ota_installed = 14;
+}
+
 // Information sent by the device in a "checkin" request.
 message AndroidCheckinProto {
+  // Android device build information (required for Android-native checkins).
+  optional AndroidBuildProto build = 1;
+
   // Miliseconds since the Unix epoch of the device's last successful checkin.
   optional int64 last_checkin_msec = 2;
 
@@ -75,8 +124,6 @@ message AndroidCheckinProto {
   // This will only be populated for Chrome builds/ChromeOS devices
   optional gm_checkin_proto.ChromeBuildProto chrome_build = 13;
 
-  // Note: Some of the Android specific optional fields were skipped to limit
-  // the protobuf definition.
   // Next 14
 }
 
