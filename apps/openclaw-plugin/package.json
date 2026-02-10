@@ -13,7 +13,8 @@
   "files": [
     "dist/",
     "scripts/postinstall.mjs",
-    "openclaw.plugin.json"
+    "openclaw.plugin.json",
+    "checksums.json"
   ],
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

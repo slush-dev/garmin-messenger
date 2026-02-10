@@ -85,6 +85,7 @@ vi.mock("./mcp-bridge.ts", () => {
         conversations: [],
         addresses: { "user-1": "+15555550100" },
       })),
+      subscribe: vi.fn(async () => {}),
     })),
   };
 });
@@ -257,9 +258,9 @@ describe("garminPlugin", () => {
       expect(result!.allowFrom).toEqual(["+15555550100"]);
     });
 
-    it("defaults to pairing policy", () => {
+    it("defaults to allowlist policy", () => {
       const result = garminPlugin.security!.resolveDmPolicy!(makeSecurityCtx());
-      expect(result!.policy).toBe("pairing");
+      expect(result!.policy).toBe("allowlist");
     });
   });
 
@@ -750,6 +751,34 @@ describe("garminPlugin", () => {
       await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
     });
 
+    it("skips download for unsupported media type", async () => {
+      const { callback, bridge } = await startAndCapture();
+
+      await callback("garmin://messages", {
+        type: "message",
+        conversation_id: "conv-1",
+        message: { messageId: "msg-unsup", messageBody: "File attached", from: "sender-1", mediaId: "media-doc", mediaType: "DocumentPdf" },
+      });
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Should NOT attempt to download unsupported media type
+      expect(bridge.downloadMedia).not.toHaveBeenCalled();
+      // Should still dispatch the text body without media
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ctx: expect.objectContaining({
+            Body: "File attached",
+            From: "garmin-messenger:sender-1",
+          }),
+        }),
+      );
+      const call = mockDispatch.mock.calls[0][0];
+      expect(call.ctx.MediaPath).toBeUndefined();
+      expect(call.ctx.MediaType).toBeUndefined();
+
+      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+    });
+
     it("ignores status_update notifications gracefully", async () => {
       const { callback, bridge } = await startAndCapture();
 
@@ -882,6 +911,7 @@ describe("garminPlugin", () => {
             json: { success: true, instance_id: "new-instance", fcm: "FCM push notifications registered" },
           })),
           readResourceJson: vi.fn(async () => ({ members: {}, conversations: [], addresses: {} })),
+          subscribe: vi.fn(async () => {}),
         };
         return bridge;
       });

@@ -4,17 +4,46 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 VENV="$REPO_ROOT/.venv"
 
-if [ ! -d "$VENV" ]; then
-    echo "pre-push: .venv not found at $VENV — run ./scripts/python-create-env.sh first"
-    exit 1
+# Determine which files changed in the push range
+PYTHON_CHANGED=false
+while read -r local_ref local_oid remote_ref remote_oid; do
+    if [ "$local_oid" = "0000000000000000000000000000000000000000" ]; then
+        continue  # branch deletion
+    fi
+    if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+        # New branch — diff against merge-base with main
+        base=$(git merge-base HEAD main 2>/dev/null || echo "")
+        if [ -z "$base" ]; then
+            range="HEAD"
+        else
+            range="$base...$local_oid"
+        fi
+    else
+        range="$remote_oid..$local_oid"
+    fi
+    if git diff --name-only "$range" | grep -qE '^(lib/python|apps/python-cli)/'; then
+        PYTHON_CHANGED=true
+        break
+    fi
+done
+
+if [ "$PYTHON_CHANGED" = true ]; then
+    if [ ! -d "$VENV" ]; then
+        echo "pre-push: Python files changed but .venv not found at $VENV"
+        echo "  Run ./scripts/python-create-env.sh first"
+        exit 1
+    fi
+    source "$VENV/bin/activate"
+
+    echo "pre-push: running all lint..."
+    make -C "$REPO_ROOT" lint
+
+    echo "pre-push: running all tests..."
+    make -C "$REPO_ROOT" test
+else
+    echo "pre-push: no Python changes, running Go lint and tests only..."
+    make -C "$REPO_ROOT" lint-go
+    make -C "$REPO_ROOT" test-go
 fi
-
-source "$VENV/bin/activate"
-
-echo "pre-push: running lint..."
-make -C "$REPO_ROOT" lint
-
-echo "pre-push: running all tests..."
-make -C "$REPO_ROOT" test
 
 echo "pre-push: all checks passed"

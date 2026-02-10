@@ -28,7 +28,7 @@ type GarminMCPServer struct {
 
 	pendingOTP *gm.OtpRequest // stored between login_request_otp and login_confirm_otp
 
-	listenMu     sync.Mutex
+	listenMu     sync.RWMutex
 	listening     bool
 	listenCancel  context.CancelFunc
 	sr            *gm.HermesSignalR

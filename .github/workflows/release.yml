@@ -67,11 +67,24 @@ jobs:
 
       - name: Set version from tag
         env:
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
           VERSION="${TAG_NAME#v}"
           cd apps/openclaw-plugin
           npm version "$VERSION" --no-git-tag-version
+
+      - name: Install and build
+        run: cd apps/openclaw-plugin && npm install --ignore-scripts && npm run build
+
+      - name: Generate checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/releases/tags/$TAG_NAME" \
+            --jq '[.assets[] | select(.name | startswith("garmin-messenger-")) | {(.name): .digest}] | add' \
+            > apps/openclaw-plugin/checksums.json
 
       - name: Pack tarball
         run: cd apps/openclaw-plugin && npm pack

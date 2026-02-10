@@ -15,6 +15,7 @@ export interface MCPBridgeOptions {
   verbose?: boolean;
   logger: ChannelLogSink;
   onResourceUpdated?: ResourceUpdatedHandler;
+  onDisconnected?: () => void;
   timeoutMs?: number;
 }
 
@@ -81,12 +82,14 @@ export class MCPBridge {
       this.logger.warn("MCP transport closed unexpectedly");
       this.client = null;
       this.transport = null;
+      this.opts.onDisconnected?.();
     };
     this.transport.onerror = (err) => {
       debugLog(`[mcp] transport error: ${err}`);
       this.logger.error(`MCP transport error: ${err}`);
       this.client = null;
       this.transport = null;
+      this.opts.onDisconnected?.();
     };
 
     await this.client.connect(this.transport);
