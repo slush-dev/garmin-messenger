@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { MCPBridge } from "./mcp-bridge.js";
-import { resolveBinary } from "./binary.js";
+import { resolveBinary, ensureBinary } from "./binary.js";
 import { DEFAULT_ACCOUNT_ID } from "./types.js";
 import type {
   ChannelOnboardingAdapter,
@@ -82,7 +82,7 @@ export const garminOnboardingAdapter: ChannelOnboardingAdapter = {
     let binaryPath: string;
     try {
       const chCfg = cfg.channels?.[CHANNEL_ID] ?? {};
-      binaryPath = resolveBinary(chCfg.binaryPath);
+      binaryPath = await ensureBinary(chCfg.binaryPath);
     } catch {
       await prompter.note(
         "garmin-messenger binary not found.\n" +
