@@ -53,6 +53,10 @@ func (g *GarminMCPServer) registerResources() {
 func (g *GarminMCPServer) handleStatusResource(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 	g.mu.RLock()
 	loggedIn := g.auth != nil
+	var instanceID string
+	if loggedIn && g.auth != nil {
+		instanceID = g.auth.InstanceID
+	}
 	g.mu.RUnlock()
 
 	g.listenMu.Lock()
@@ -62,6 +66,9 @@ func (g *GarminMCPServer) handleStatusResource(_ context.Context, req *mcp.ReadR
 	status := map[string]any{
 		"logged_in": loggedIn,
 		"listening": listening,
+	}
+	if instanceID != "" {
+		status["instance_id"] = instanceID
 	}
 	return jsonResource(req.Params.URI, status)
 }

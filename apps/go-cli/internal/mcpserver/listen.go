@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -123,16 +122,32 @@ func (g *GarminMCPServer) runListenLoop(ctx context.Context, auth *gm.HermesAuth
 
 	sr.OnMessage(func(msg gm.MessageModel) {
 		if !shouldDedup() || !isDuplicate(msg.MessageID.String()) {
+			meta := mcp.Meta{
+				"type":            "message",
+				"conversation_id": msg.ConversationID.String(),
+			}
+			if msgJSON, err := json.Marshal(msg); err == nil {
+				meta["message"] = json.RawMessage(msgJSON)
+			}
 			g.server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{
-				URI: fmt.Sprintf("garmin://conversations/%s/messages", msg.ConversationID),
+				URI:  "garmin://messages",
+				Meta: meta,
 			})
 		}
 		sr.MarkAsDelivered(msg.ConversationID, msg.MessageID)
 	})
 
 	sr.OnStatusUpdate(func(update gm.MessageStatusUpdate) {
+		meta := mcp.Meta{
+			"type":            "status_update",
+			"conversation_id": update.MessageID.ConversationID.String(),
+		}
+		if updateJSON, err := json.Marshal(update); err == nil {
+			meta["status_update"] = json.RawMessage(updateJSON)
+		}
 		g.server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{
-			URI: fmt.Sprintf("garmin://conversations/%s/messages", update.MessageID.ConversationID),
+			URI:  "garmin://messages",
+			Meta: meta,
 		})
 	})
 
@@ -164,8 +179,16 @@ func (g *GarminMCPServer) runListenLoop(ctx context.Context, auth *gm.HermesAuth
 				var catchupCount atomic.Int32
 				fcmClient.OnMessage(func(msg fcm.NewMessage) {
 					if !isDuplicate(msg.MessageID.String()) {
+						meta := mcp.Meta{
+							"type":            "message",
+							"conversation_id": msg.ConversationID.String(),
+						}
+						if msgJSON, err := json.Marshal(msg.MessageModel); err == nil {
+							meta["message"] = json.RawMessage(msgJSON)
+						}
 						g.server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{
-							URI: fmt.Sprintf("garmin://conversations/%s/messages", msg.ConversationID),
+							URI:  "garmin://messages",
+							Meta: meta,
 						})
 						catchupCount.Add(1)
 					}

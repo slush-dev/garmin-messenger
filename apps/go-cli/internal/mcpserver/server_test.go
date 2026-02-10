@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	gm "github.com/slush-dev/garmin-messenger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -36,6 +37,34 @@ func testServer(t *testing.T) (*mcp.ClientSession, *GarminMCPServer) {
 	return cs, g
 }
 
+func TestStatusResource_WithInstanceID(t *testing.T) {
+	cs, g := testServer(t)
+	ctx := context.Background()
+
+	// Simulate a logged-in state with an instance ID
+	g.mu.Lock()
+	g.auth = &gm.HermesAuth{}
+	g.auth.InstanceID = "test-instance-123"
+	g.mu.Unlock()
+
+	result, err := cs.ReadResource(ctx, &mcp.ReadResourceParams{URI: "garmin://status"})
+	if err != nil {
+		t.Fatalf("read status: %v", err)
+	}
+
+	var status map[string]any
+	if err := json.Unmarshal([]byte(result.Contents[0].Text), &status); err != nil {
+		t.Fatalf("unmarshal status: %v", err)
+	}
+
+	if status["logged_in"] != true {
+		t.Errorf("expected logged_in=true, got %v", status["logged_in"])
+	}
+	if status["instance_id"] != "test-instance-123" {
+		t.Errorf("expected instance_id=test-instance-123, got %v", status["instance_id"])
+	}
+}
+
 func TestStatusResource_NotLoggedIn(t *testing.T) {
 	cs, _ := testServer(t)
 	ctx := context.Background()
@@ -59,6 +88,9 @@ func TestStatusResource_NotLoggedIn(t *testing.T) {
 	}
 	if status["listening"] != false {
 		t.Errorf("expected listening=false, got %v", status["listening"])
+	}
+	if _, ok := status["instance_id"]; ok {
+		t.Errorf("expected no instance_id when not logged in, got %v", status["instance_id"])
 	}
 }
 
