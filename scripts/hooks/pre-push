@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+VENV="$REPO_ROOT/.venv"
+
+if [ ! -d "$VENV" ]; then
+    echo "pre-push: .venv not found at $VENV — run ./scripts/python-create-env.sh first"
+    exit 1
+fi
+
+source "$VENV/bin/activate"
+
+echo "pre-push: running lint..."
+make -C "$REPO_ROOT" lint
+
+echo "pre-push: running all tests..."
+make -C "$REPO_ROOT" test
+
+echo "pre-push: all checks passed"
