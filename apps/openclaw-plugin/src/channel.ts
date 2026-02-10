@@ -197,10 +197,10 @@ type GarminGatewayExtensions = {
 };
 
 export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayExtensions = {
-  id: "garmin-messenger",
+  id: "openclaw-garmin-messenger",
 
   meta: {
-    id: "garmin-messenger",
+    id: "openclaw-garmin-messenger",
     label: "Garmin Messenger",
     selectionLabel: "Garmin Messenger",
     docsPath: "/channels/garmin-messenger",

@@ -1,5 +1,5 @@
 {
-  "id": "garmin-messenger",
+  "id": "openclaw-garmin-messenger",
   "name": "Garmin Messenger",
   "description": "Send and receive messages via Garmin Messenger (Hermes protocol)",
   "channels": ["garmin-messenger"],
