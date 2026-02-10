@@ -90,6 +90,8 @@ jobs:
 
       - name: Publish to npm
         run: cd apps/openclaw-plugin && npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Pack tarball
         run: cd apps/openclaw-plugin && npm pack
