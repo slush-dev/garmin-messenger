@@ -1,9 +1,10 @@
 // Plain-JS postinstall script — runs under bare `node` (no jiti / tsx).
 // Inlines platform constants so there are no .ts imports.
 
-import { createWriteStream, chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createWriteStream, chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
 
@@ -23,6 +24,16 @@ export function buildDownloadURL(version, suffix) {
   return `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${BINARY_NAME}-${suffix}`;
 }
 
+export function verifyChecksum(filePath, expectedDigest) {
+  const data = readFileSync(filePath);
+  const actual = createHash("sha256").update(data).digest("hex");
+  const expected = expectedDigest.replace(/^sha256:/, "");
+  if (actual !== expected) {
+    unlinkSync(filePath);
+    throw new Error(`Checksum mismatch: expected ${expected}, got ${actual}`);
+  }
+}
+
 export function downloadBinary(url, destPath) {
   return new Promise((resolve, reject) => {
     let redirects = 0;
@@ -37,8 +48,14 @@ export function downloadBinary(url, destPath) {
 
       getter(currentUrl, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const location = res.headers.location;
+          if (currentUrl.startsWith("https://") && location.startsWith("http://")) {
+            res.resume();
+            reject(new Error("Refusing HTTPS to HTTP redirect downgrade"));
+            return;
+          }
           redirects++;
-          follow(res.headers.location);
+          follow(location);
           return;
         }
 
@@ -89,6 +106,20 @@ async function main() {
 
   try {
     await downloadBinary(url, destPath);
+
+    const checksumsPath = join(__dirname, "..", "checksums.json");
+    if (existsSync(checksumsPath)) {
+      const checksums = JSON.parse(readFileSync(checksumsPath, "utf-8"));
+      const assetName = `${BINARY_NAME}-${suffix}`;
+      const expectedDigest = checksums[assetName];
+      if (expectedDigest) {
+        verifyChecksum(destPath, expectedDigest);
+        console.log(`[garmin-messenger] Checksum verified`);
+      } else {
+        console.warn(`[garmin-messenger] No checksum found for ${assetName}, skipping verification`);
+      }
+    }
+
     console.log(`[garmin-messenger] Installed to ${destPath}`);
   } catch (err) {
     console.warn(

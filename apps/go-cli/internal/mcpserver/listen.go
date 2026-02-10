@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,7 +48,9 @@ func (g *GarminMCPServer) handleListen(ctx context.Context, req *mcp.CallToolReq
 		CatchupTimeout int  `json:"catchup_timeout"`
 	}
 	if req.Params.Arguments != nil {
-		json.Unmarshal(req.Params.Arguments, &args)
+		if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+			return errorResult(fmt.Sprintf("invalid arguments: %v", err)), nil
+		}
 	}
 	if args.CatchupTimeout <= 0 {
 		args.CatchupTimeout = 15
@@ -247,6 +250,8 @@ func (g *GarminMCPServer) runListenLoop(ctx context.Context, auth *gm.HermesAuth
 	sr.Stop()
 }
 
+const maxDedupEntries = 1000
+
 func newMessageDeduper() (func(string) bool, func()) {
 	var mu sync.Mutex
 	dedup := make(map[string]struct{})
@@ -259,6 +264,9 @@ func newMessageDeduper() (func(string) bool, func()) {
 		defer mu.Unlock()
 		if _, exists := dedup[msgID]; exists {
 			return true
+		}
+		if len(dedup) >= maxDedupEntries {
+			dedup = make(map[string]struct{})
 		}
 		dedup[msgID] = struct{}{}
 		return false

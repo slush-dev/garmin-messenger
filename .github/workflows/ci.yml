@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  lint-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       - name: Lint Python CLI
         run: ruff check apps/python-cli/src/ apps/python-cli/tests/
 
-  test:
+  test-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

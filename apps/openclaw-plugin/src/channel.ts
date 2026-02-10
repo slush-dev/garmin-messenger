@@ -108,10 +108,15 @@ async function startAccountInner(ctx: ChannelGatewayContext<ResolvedGarminAccoun
     logger: log ?? { info() {}, warn() {}, error() {} },
     onResourceUpdated: (uri: string, meta?: Record<string, unknown>) => {
       debugLog(`[inbound] resource update notification: ${uri} meta=${JSON.stringify(meta)}`);
+      // Fire-and-forget: minimal state mutation here; message ordering is
+      // handled by the AI agent layer, so async dispatch is acceptable.
       handleResourceUpdate(accountId, uri, meta).catch((err) => {
         debugLog(`[inbound] ERROR handling resource update: ${err}\n${(err as Error).stack ?? ""}`);
         log?.error(`Error handling resource update: ${err}`);
       });
+    },
+    onDisconnected: () => {
+      log?.error(`Account ${accountId}: MCP bridge disconnected unexpectedly`);
     },
   });
 
@@ -428,6 +433,10 @@ export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayE
           const MAX_MEDIA_BYTES = 1024 * 1024; // 1 MB
           const resp = await fetch(filePath);
           if (!resp.ok) throw new Error(`Download failed: HTTP ${resp.status}`);
+          const ct = resp.headers.get("content-type") ?? "";
+          if (ct && !ct.startsWith("image/") && !ct.startsWith("audio/")) {
+            throw new Error(`Unsupported media content-type: ${ct}`);
+          }
           const contentLength = Number(resp.headers.get("content-length"));
           if (contentLength > MAX_MEDIA_BYTES) {
             throw new Error(`Media too large: ${contentLength} bytes (max ${MAX_MEDIA_BYTES})`);
@@ -465,7 +474,7 @@ export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayE
 
   security: {
     resolveDmPolicy(ctx) {
-      const policy = ctx.account.config.dmPolicy ?? "pairing";
+      const policy = ctx.account.config.dmPolicy ?? "allowlist";
       return {
         policy,
         allowFrom: ctx.account.config.allowFrom ?? [],
@@ -659,11 +668,11 @@ function resolveMediaInboundDir(): string {
   return join(stateDir, "media", "inbound");
 }
 
-function garminMediaToMime(mediaType: string): { mime: string; ext: string } {
+function garminMediaToMime(mediaType: string): { mime: string; ext: string } | null {
   switch (mediaType) {
     case "ImageAvif": return { mime: "image/avif", ext: ".avif" };
     case "AudioOgg": return { mime: "audio/ogg", ext: ".ogg" };
-    default: return { mime: "application/octet-stream", ext: ".bin" };
+    default: return null;
   }
 }
 
@@ -700,19 +709,25 @@ async function processMessage(
   let mimeType: string | undefined;
 
   if (hasMedia) {
-    const { mime, ext } = garminMediaToMime(msg.mediaType ?? "");
-    const mediaDir = resolveMediaInboundDir();
-    const outputPath = join(mediaDir, `${msg.mediaId}${ext}`);
-    debugLog(`[inbound] downloading media: type=${msg.mediaType} → ${outputPath}`);
-    try {
-      await mkdir(mediaDir, { recursive: true });
-      await state.bridge.downloadMedia(conversationId, msg.messageId, outputPath);
-      mediaPath = outputPath;
-      mimeType = mime;
-      debugLog(`[inbound] media downloaded OK: ${outputPath}`);
-    } catch (err) {
-      debugLog(`[inbound] media download FAILED: ${err}`);
-      log.warn(`Failed to download media ${msg.mediaId}: ${err}`);
+    const resolved = garminMediaToMime(msg.mediaType ?? "");
+    if (!resolved) {
+      debugLog(`[inbound] SKIP unsupported media type: ${msg.mediaType}`);
+      log.warn(`Skipping unsupported media type: ${msg.mediaType}`);
+    } else {
+      const { mime, ext } = resolved;
+      const mediaDir = resolveMediaInboundDir();
+      const outputPath = join(mediaDir, `${msg.mediaId}${ext}`);
+      debugLog(`[inbound] downloading media: type=${msg.mediaType} → ${outputPath}`);
+      try {
+        await mkdir(mediaDir, { recursive: true });
+        await state.bridge.downloadMedia(conversationId, msg.messageId, outputPath);
+        mediaPath = outputPath;
+        mimeType = mime;
+        debugLog(`[inbound] media downloaded OK: ${outputPath}`);
+      } catch (err) {
+        debugLog(`[inbound] media download FAILED: ${err}`);
+        log.warn(`Failed to download media ${msg.mediaId}: ${err}`);
+      }
     }
   }
 

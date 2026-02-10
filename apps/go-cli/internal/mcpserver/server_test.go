@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	gm "github.com/slush-dev/garmin-messenger"
@@ -252,6 +253,33 @@ func TestStopTool_NotListening(t *testing.T) {
 	}
 	if data["listening"] != false {
 		t.Errorf("expected listening=false, got %v", data["listening"])
+	}
+}
+
+func TestListenTool_MalformedArguments(t *testing.T) {
+	cs, g := testServer(t)
+	ctx := context.Background()
+
+	// Simulate a logged-in state
+	g.mu.Lock()
+	g.auth = &gm.HermesAuth{}
+	g.api = gm.NewHermesAPI(g.auth)
+	g.mu.Unlock()
+
+	result, err := cs.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "listen",
+		Arguments: map[string]any{"no_catchup": "not-a-bool"},
+	})
+	if err != nil {
+		t.Fatalf("call tool: %v", err)
+	}
+
+	if !result.IsError {
+		t.Error("expected IsError=true for malformed arguments")
+	}
+	text := result.Content[0].(*mcp.TextContent).Text
+	if !strings.Contains(text, "invalid arguments") {
+		t.Errorf("expected error about invalid arguments, got: %s", text)
 	}
 }
 

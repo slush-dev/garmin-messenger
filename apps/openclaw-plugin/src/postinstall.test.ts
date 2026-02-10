@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,6 +43,53 @@ describe("postinstall", () => {
     expect(url).toBe(
       "https://github.com/slush-dev/garmin-messenger/releases/download/v1.0.0/garmin-messenger-windows-amd64.exe",
     );
+  });
+
+  describe("verifyChecksum", () => {
+    let verifyChecksum: (filePath: string, expectedDigest: string) => void;
+
+    beforeEach(async () => {
+      const mod = await import("../scripts/postinstall.mjs");
+      verifyChecksum = mod.verifyChecksum;
+      if (existsSync(testBinDir)) {
+        rmSync(testBinDir, { recursive: true });
+      }
+      mkdirSync(testBinDir, { recursive: true });
+    });
+
+    afterEach(() => {
+      if (existsSync(testBinDir)) {
+        rmSync(testBinDir, { recursive: true });
+      }
+    });
+
+    it("passes for matching sha256 digest", () => {
+      const content = "test binary content";
+      const filePath = join(testBinDir, "good-binary");
+      writeFileSync(filePath, content);
+      const hash = createHash("sha256").update(Buffer.from(content)).digest("hex");
+
+      expect(() => verifyChecksum(filePath, `sha256:${hash}`)).not.toThrow();
+      expect(existsSync(filePath)).toBe(true);
+    });
+
+    it("passes for raw hex digest without sha256: prefix", () => {
+      const content = "another binary";
+      const filePath = join(testBinDir, "raw-hash-binary");
+      writeFileSync(filePath, content);
+      const hash = createHash("sha256").update(Buffer.from(content)).digest("hex");
+
+      expect(() => verifyChecksum(filePath, hash)).not.toThrow();
+    });
+
+    it("throws and deletes file on mismatch", () => {
+      const filePath = join(testBinDir, "bad-binary");
+      writeFileSync(filePath, "actual content");
+
+      expect(() => verifyChecksum(filePath, "sha256:0000000000000000000000000000000000000000000000000000000000000000"))
+        .toThrow("Checksum mismatch");
+      expect(existsSync(filePath)).toBe(false);
+    });
   });
 
   describe("downloadBinary", () => {

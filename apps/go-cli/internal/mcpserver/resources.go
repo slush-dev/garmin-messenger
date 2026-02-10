@@ -54,14 +54,14 @@ func (g *GarminMCPServer) handleStatusResource(_ context.Context, req *mcp.ReadR
 	g.mu.RLock()
 	loggedIn := g.auth != nil
 	var instanceID string
-	if loggedIn && g.auth != nil {
+	if loggedIn {
 		instanceID = g.auth.InstanceID
 	}
 	g.mu.RUnlock()
 
-	g.listenMu.Lock()
+	g.listenMu.RLock()
 	listening := g.listening
-	g.listenMu.Unlock()
+	g.listenMu.RUnlock()
 
 	status := map[string]any{
 		"logged_in": loggedIn,

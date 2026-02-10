@@ -72,4 +72,15 @@ describe("MCPBridge", () => {
     await bridge.disconnect();
     expect(bridge.connected).toBe(false);
   });
+
+  it("accepts onDisconnected option", () => {
+    const onDisconnected = vi.fn();
+    const bridge = new MCPBridge({
+      binaryPath: "/nonexistent",
+      logger: mockLogger,
+      onDisconnected,
+    });
+    // Just verifying it constructs without error
+    expect(bridge.connected).toBe(false);
+  });
 });
