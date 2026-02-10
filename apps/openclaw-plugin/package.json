@@ -1,0 +1,39 @@
+{
+  "name": "@openclaw/garmin-messenger",
+  "version": "1.1.0",
+  "description": "OpenClaw channel plugin for Garmin Messenger (Hermes)",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "postinstall": "node scripts/postinstall.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": [
+    "dist/",
+    "scripts/postinstall.mjs",
+    "openclaw.plugin.json"
+  ],
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@sinclair/typebox": "^0.34.48",
+    "@types/node": "^25.2.2",
+    "esbuild": "^0.25.0",
+    "openclaw": "^2026.2.9",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.cjs"
+    ],
+    "channel": {
+      "id": "garmin-messenger",
+      "label": "Garmin Messenger",
+      "selectionLabel": "Garmin Messenger",
+      "docsPath": "/channels/garmin-messenger",
+      "blurb": "Send and receive messages via Garmin Messenger (Hermes protocol)"
+    }
+  }
+}

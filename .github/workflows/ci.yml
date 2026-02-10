@@ -68,3 +68,12 @@ jobs:
         run: cd lib/go && go test ./... -v
       - name: Test Go CLI
         run: cd apps/go-cli && go test ./... -v
+
+  test-openclaw-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd apps/openclaw-plugin && npm install --ignore-scripts && npx vitest run

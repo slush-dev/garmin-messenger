@@ -54,3 +54,32 @@ jobs:
           if [ "$TARGET_OS" = "windows" ]; then ext=".exe"; fi
           asset="garmin-messenger-${TARGET_OS}-${TARGET_ARCH}${ext}"
           gh release upload "$TAG_NAME" "$asset"
+
+  pack-openclaw-plugin:
+    needs: build-go-cli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set version from tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          cd apps/openclaw-plugin
+          npm version "$VERSION" --no-git-tag-version
+
+      - name: Pack tarball
+        run: cd apps/openclaw-plugin && npm pack
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          mv apps/openclaw-plugin/*.tgz openclaw-garmin-messenger.tgz
+          gh release upload "$TAG_NAME" openclaw-garmin-messenger.tgz
