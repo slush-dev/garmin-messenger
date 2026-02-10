@@ -153,7 +153,7 @@ make build-go-cli      # build Go CLI binary
 ## Important Rules
 
 - **Never install packages system-wide.** Always use a virtualenv per client.
-- **Do not commit `research/`**, it is just a symlink outside the project.
+- **Do not commit `research/` and `vendor/`**, these are for reference only and not a part of our project.
 - **`research/` notes are the source of truth.** Also see `docs/api-reference.md` for the full Hermes API reference.
 - **Shared test fixtures** go in `tests/fixtures/` so all implementations use identical test data.
 - **Use TDD pattern when writing new features or fixing bugs.** Always plan and write failing tests which show wanted behavior, before implementation. Fix until tests pass.

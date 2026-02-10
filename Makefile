@@ -1,6 +1,7 @@
 .PHONY: help test test-python test-python-lib test-python-cli test-go test-go-lib test-go-cli \
        lint lint-python lint-python-lib lint-python-cli lint-go lint-go-lib lint-go-cli \
-       build build-python-lib build-python-cli build-go-cli proto-gen clean
+       build build-python-lib build-python-cli build-go-cli proto-gen clean \
+       test-openclaw-plugin build-openclaw-plugin
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -10,7 +11,7 @@ help: ## Show this help
 # Test
 # ---------------------------------------------------------------------------
 
-test: test-python test-go ## Run all tests
+test: test-python test-go test-openclaw-plugin ## Run all tests
 
 test-python: test-python-lib test-python-cli ## Run all Python tests
 test-python-lib: ## Run Python library tests
@@ -23,6 +24,9 @@ test-go-lib: ## Run Go library tests
 	cd lib/go && go test ./... -v
 test-go-cli: ## Run Go CLI tests
 	cd apps/go-cli && go test ./... -v
+
+test-openclaw-plugin: ## Run OpenClaw plugin tests
+	cd apps/openclaw-plugin && npx vitest run
 
 # ---------------------------------------------------------------------------
 # Lint
@@ -46,7 +50,7 @@ lint-go-cli: ## Lint Go CLI
 # Build / Install
 # ---------------------------------------------------------------------------
 
-build: build-python-lib build-python-cli build-go-cli ## Build all
+build: build-python-lib build-python-cli build-go-cli build-openclaw-plugin ## Build all
 
 build-python-lib: ## Install Python library in dev mode
 	cd lib/python && pip install -e ".[dev]"
@@ -54,6 +58,9 @@ build-python-cli: ## Install Python CLI in dev mode
 	cd apps/python-cli && pip install -e .
 build-go-cli: ## Build Go CLI binary
 	cd apps/go-cli && go build -trimpath -ldflags="-s -w -X main.version=$$(git describe --tags --always --dirty)" -o ../../build/go/garmin-messenger .
+
+build-openclaw-plugin: ## Pack OpenClaw plugin tarball into build/
+	cd apps/openclaw-plugin && npm run build && npm version --no-git-tag-version --allow-same-version $$(git describe --tags --abbrev=0 | sed 's/^v//') && npm pack --pack-destination ../../build/openclaw-plugin
 
 # ---------------------------------------------------------------------------
 # Cleanup

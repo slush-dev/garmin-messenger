@@ -1,0 +1,28 @@
+{
+  "id": "garmin-messenger",
+  "name": "Garmin Messenger",
+  "description": "Send and receive messages via Garmin Messenger (Hermes protocol)",
+  "channels": ["garmin-messenger"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": { "type": "boolean", "description": "Enable the Garmin Messenger channel" },
+      "binaryPath": { "type": "string", "description": "Path to garmin-messenger binary (auto-detected if omitted)" },
+      "sessionDir": { "type": "string", "description": "Directory for saved credentials" },
+      "verbose": { "type": "boolean", "description": "Enable debug logging for the MCP binary" },
+      "dmPolicy": { "type": "string", "enum": ["open", "pairing", "allowlist"], "description": "DM policy: open, pairing, or allowlist" },
+      "allowFrom": { "type": "array", "items": { "type": "string" }, "description": "Phone numbers allowed to send messages (for allowlist policy)" }
+    }
+  },
+  "uiHints": {
+    "binaryPath": {
+      "label": "Binary Path",
+      "advanced": true
+    },
+    "sessionDir": {
+      "label": "Session Directory",
+      "advanced": true
+    }
+  }
+}
