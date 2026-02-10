@@ -163,13 +163,7 @@ garmin-messenger mcp --verbose    # debug logging to stderr
 
 **Resources:** `garmin://status`, `garmin://conversations`, `garmin://conversations/{id}/messages`, `garmin://conversations/{id}/members`, `garmin://contacts`
 
-Configure in Claude Code (no manual install needed):
-
-```bash
-claude mcp add --transport stdio garmin-messenger -- go run github.com/slush-dev/garmin-messenger/apps/go-cli@latest mcp
-```
-
-Or if you don't have Go runtime, download the binary and configure:
+Configure in Claude Code:
 
 ```bash
 # Linux (amd64) — for other platforms see Releases page
