@@ -57,6 +57,24 @@ func TestGCMCheckin(t *testing.T) {
 	assert.Equal(t, int32(3), req.GetVersion())
 	require.NotNil(t, req.Fragment)
 	assert.Equal(t, int32(0), req.GetFragment())
+
+	// Verify Android build info is populated.
+	build := req.GetCheckin().GetBuild()
+	require.NotNil(t, build, "Android-native checkin must include AndroidBuildProto")
+	assert.Equal(t, device.BuildFingerprint, build.GetFingerprint())
+	assert.Equal(t, device.Hardware, build.GetHardware())
+	assert.Equal(t, device.Brand, build.GetBrand())
+	assert.Equal(t, device.Device, build.GetDevice())
+	assert.Equal(t, device.Model, build.GetModel())
+	assert.Equal(t, device.Manufacturer, build.GetManufacturer())
+	assert.Equal(t, device.Product, build.GetProduct())
+	assert.Equal(t, int32(device.SDKVersion), build.GetSdkVersion())
+	assert.Equal(t, int32(device.GMSVersion), build.GetPackageVersionCode())
+	assert.Equal(t, "android-google", build.GetClientId())
+
+	// Verify locale and timezone are set.
+	assert.Equal(t, "en_US", req.GetLocale())
+	assert.Equal(t, "America/New_York", req.GetTimeZone())
 }
 
 func TestGCMCheckin_Recheckin(t *testing.T) {
@@ -114,6 +132,10 @@ func TestGCMRegister(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "AidLogin 123:456", r.Header.Get("Authorization"))
+
+		// Verify Android-native HTTP headers (required by Google's servers).
+		assert.Equal(t, garminAppPackage, r.Header.Get("app"), "app header must match package name")
+		assert.Contains(t, r.Header.Get("User-Agent"), "Android-GCM/1.5", "User-Agent must identify as Android GCM client")
 
 		require.NoError(t, r.ParseForm())
 		// Verify Android-native registration fields
