@@ -29,11 +29,12 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 
 ## Use Cases
 
-- **Home base communication** — Build a desktop or web dashboard for two-way messaging with field teams carrying InReach devices
-- **Automated dispatching** — Send automated messages, alerts, or check-ins to satellite devices from your backend
-- **Integration with other platforms** — Bridge Garmin Messenger to Slack, Telegram, Discord, email, or SMS
-- **Fleet tracking** — Monitor location data and messages from multiple InReach devices programmatically
-- **Emergency response** — Build custom alerting systems that receive and forward SOS-adjacent communications
+- **AI agent integration** — Give your AI agent a satellite communication channel. The built-in [MCP server](apps/go-cli/) and [OpenClaw plugin](apps/openclaw-plugin/) let any LLM send and receive messages to InReach devices out of the box
+- **Platform bridging** — Connect Garmin Messenger to Slack, Telegram, Discord, or other chat platforms
+- **Automated dispatching** — Send alerts, check-ins, or status updates to satellite devices from your backend
+- **Fleet tracking** — Monitor location and messages from multiple InReach devices programmatically
+- **Home base dashboards** — Build desktop or web UIs for two-way messaging with field teams
+- **Emergency response** — Forward SOS-adjacent communications to custom alerting systems
 - **IoT and telemetry** — Receive sensor data or status reports from remote InReach-equipped stations
 
 ## Repository Structure
@@ -43,8 +44,9 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 │   ├── go/                 Go library (complete, 141 tests)
 │   └── python/             Python library (complete, 231 tests)
 ├── apps/                   Standalone applications
-│   ├── go-cli/             Go CLI tool (complete)
-│   └── python-cli/         Python CLI tool (complete, 285 tests)
+│   ├── go-cli/             Go CLI tool with MCP server (complete)
+│   ├── python-cli/         Python CLI tool (complete, 285 tests)
+│   └── openclaw-plugin/    OpenClaw AI gateway channel plugin (TypeScript)
 ├── tests/                  Cross-implementation test infrastructure
 │   └── fixtures/           Shared mock API response data (17 JSON files)
 ├── docs/                   Protocol & API documentation
@@ -59,6 +61,7 @@ All you need is a phone number registered with Garmin Messenger. No InReach devi
 | Python library | [`lib/python/`](lib/python/) | **[Python Library README](lib/python/README.md)** |
 | Go CLI | [`apps/go-cli/`](apps/go-cli/) | **[Go CLI README](apps/go-cli/README.md)** |
 | Python CLI | [`apps/python-cli/`](apps/python-cli/) | **[Python CLI README](apps/python-cli/README.md)** |
+| OpenClaw plugin | [`apps/openclaw-plugin/`](apps/openclaw-plugin/) | **[OpenClaw Plugin README](apps/openclaw-plugin/README.md)** |
 
 > Want to add an implementation or application? Contributions are welcome — see [Contributing](#contributing).
 
