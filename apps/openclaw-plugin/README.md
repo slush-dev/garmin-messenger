@@ -8,7 +8,7 @@ Built on the [Go CLI](../go-cli/) via MCP stdio.
 
 ```bash
 # 1. Install the plugin
-openclaw plugins install https://github.com/slush-dev/garmin-messenger/releases/latest/download/openclaw-garmin-messenger.tgz
+openclaw plugins install @slush-dev/openclaw-garmin-messenger
 
 # 2. Add and authenticate (interactive wizard)
 openclaw channels add
@@ -18,8 +18,18 @@ openclaw channels add
 To install a specific version:
 
 ```bash
-openclaw plugins install https://github.com/slush-dev/garmin-messenger/releases/download/v1.0.0/openclaw-garmin-messenger.tgz
+openclaw plugins install @slush-dev/openclaw-garmin-messenger@1.0.0
 ```
+
+<details>
+<summary>Alternative: install from GitHub Release tarball</summary>
+
+```bash
+curl -LO https://github.com/slush-dev/garmin-messenger/releases/latest/download/openclaw-garmin-messenger.tgz
+openclaw plugins install ./openclaw-garmin-messenger.tgz
+```
+
+</details>
 
 The postinstall script downloads the `garmin-messenger` binary for your platform from the same GitHub release.
 

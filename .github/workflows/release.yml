@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-go-cli:
@@ -64,6 +65,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Set version from tag
         env:
@@ -85,6 +87,9 @@ jobs:
           gh api "repos/$REPO/releases/tags/$TAG_NAME" \
             --jq '[.assets[] | select(.name | startswith("garmin-messenger-")) | {(.name): .digest}] | add' \
             > apps/openclaw-plugin/checksums.json
+
+      - name: Publish to npm
+        run: cd apps/openclaw-plugin && npm publish --provenance
 
       - name: Pack tarball
         run: cd apps/openclaw-plugin && npm pack

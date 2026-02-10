@@ -278,8 +278,9 @@ your-plugin/
 # npm (recommended for public distribution)
 openclaw plugins install @yourorg/openclaw-yourapp
 
-# GitHub tarball
-openclaw plugins install https://github.com/org/repo/releases/download/v1.0.0/plugin.tgz
+# GitHub tarball (download first — CLI does not support URLs)
+curl -LO https://github.com/org/repo/releases/download/v1.0.0/plugin.tgz
+openclaw plugins install ./plugin.tgz
 
 # GitHub subdirectory (npm 7+)
 openclaw plugins install "github:org/repo#main:packages/yourapp"

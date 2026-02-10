@@ -1,7 +1,15 @@
 {
-  "name": "@openclaw/garmin-messenger",
+  "name": "@slush-dev/openclaw-garmin-messenger",
   "version": "1.1.0",
   "description": "OpenClaw channel plugin for Garmin Messenger (Hermes)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slush-dev/garmin-messenger.git",
+    "directory": "apps/openclaw-plugin"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "dist/index.cjs",
   "scripts": {
