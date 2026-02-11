@@ -36,6 +36,9 @@ interface AccountState {
   binaryPath?: string;
   instanceId?: string;
   knownSenders: Set<string>;
+  /** Channel manager callbacks — stored so processMessage can update runtime status. */
+  getStatus?: () => ChannelAccountSnapshot;
+  setStatus?: (next: ChannelAccountSnapshot) => ChannelAccountSnapshot;
 }
 
 // Use Symbol.for so state is shared even if module is loaded multiple times (e.g. by jiti)
@@ -125,6 +128,8 @@ async function startAccountInner(ctx: ChannelGatewayContext<ResolvedGarminAccoun
     account,
     binaryPath,
     knownSenders: new Set(),
+    getStatus: ctx.getStatus,
+    setStatus: ctx.setStatus,
   };
   accounts.set(accountId, state);
 
@@ -144,46 +149,50 @@ async function startAccountInner(ctx: ChannelGatewayContext<ResolvedGarminAccoun
   debugLog(`startAccount: checking login status...`);
   const status = await bridge.getStatus();
   debugLog(`startAccount: status = ${JSON.stringify(status)}`);
-  if (!status.logged_in) {
-    log?.warn(`Account ${accountId}: not logged in — run 'garmin-messenger login' first`);
-    debugLog(`startAccount: NOT LOGGED IN, returning early`);
-    return;
-  }
+  if (status.logged_in) {
+    state.instanceId = status.instance_id;
+    debugLog(`startAccount: instanceId=${status.instance_id}`);
+    ctx.setStatus({ ...ctx.getStatus(), linked: true });
 
-  state.instanceId = status.instance_id;
-  debugLog(`startAccount: instanceId=${status.instance_id}`);
-  ctx.setStatus({ ...ctx.getStatus(), linked: true });
+    // Start listening for real-time messages
+    debugLog(`startAccount: calling startListening...`);
+    const result = await bridge.startListening();
+    if (result.isError) {
+      debugLog(`startAccount: startListening FAILED: ${result.text}`);
+      log?.error(`Failed to start listening: ${result.text}`);
+    } else {
+      debugLog(`startAccount: listening OK — ${result.text}`);
+      log?.info(`Account ${accountId}: listening for messages`);
 
-  // Start listening for real-time messages
-  debugLog(`startAccount: calling startListening...`);
-  const result = await bridge.startListening();
-  if (result.isError) {
-    debugLog(`startAccount: startListening FAILED: ${result.text}`);
-    log?.error(`Failed to start listening: ${result.text}`);
+      // Subscribe to the sentinel URI so the server delivers notifications to us
+      try {
+        await bridge.subscribe("garmin://messages");
+        debugLog(`startAccount: subscribed to garmin://messages`);
+      } catch (err) {
+        debugLog(`startAccount: subscribe FAILED: ${err}`);
+        log?.warn(`Failed to subscribe to message notifications: ${err}`);
+      }
+    }
   } else {
-    debugLog(`startAccount: listening OK — ${result.text}`);
-    log?.info(`Account ${accountId}: listening for messages`);
-
-    // Subscribe to the sentinel URI so the server delivers notifications to us
-    try {
-      await bridge.subscribe("garmin://messages");
-      debugLog(`startAccount: subscribed to garmin://messages`);
-    } catch (err) {
-      debugLog(`startAccount: subscribe FAILED: ${err}`);
-      log?.warn(`Failed to subscribe to message notifications: ${err}`);
-    }
+    log?.warn(`Account ${accountId}: not logged in — run 'garmin-messenger login' first`);
+    debugLog(`startAccount: NOT LOGGED IN, skipping listen setup`);
   }
 
-  // Cleanup on abort
-  abortSignal.addEventListener("abort", () => {
-    debugLog(`startAccount: abort signal received for ${accountId}`);
-    const s = accounts.get(accountId);
-    if (s?.bridge.connected) {
-      s.bridge.stopListening().catch(() => {});
-      s.bridge.disconnect().catch(() => {});
-    }
-    accounts.delete(accountId);
-    ctx.setStatus({ ...ctx.getStatus(), running: false, connected: false });
+  // Keep the promise alive until the account is stopped.
+  // The channel manager sets running=true while this promise is pending and
+  // resets it to false once it settles, so we must not resolve early.
+  await new Promise<void>((resolve) => {
+    abortSignal.addEventListener("abort", () => {
+      debugLog(`startAccount: abort signal received for ${accountId}`);
+      const s = accounts.get(accountId);
+      if (s?.bridge.connected) {
+        s.bridge.stopListening().catch(() => {});
+        s.bridge.disconnect().catch(() => {});
+      }
+      accounts.delete(accountId);
+      ctx.setStatus({ ...ctx.getStatus(), running: false, connected: false });
+      resolve();
+    }, { once: true });
   });
 }
 
@@ -500,6 +509,16 @@ export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayE
       connected: false,
     },
 
+    buildAccountSnapshot({ account, cfg, runtime, probe, audit }: { account: ResolvedGarminAccount; cfg: OpenClawConfig; runtime?: ChannelAccountSnapshot; probe?: unknown; audit?: unknown }): ChannelAccountSnapshot {
+      const described = garminPlugin.config.describeAccount!(account, cfg);
+      return {
+        ...described,
+        ...runtime,
+        ...(probe != null ? { probe } : {}),
+        ...(audit != null ? { audit } : {}),
+      };
+    },
+
     async probeAccount({ account }: { account: ResolvedGarminAccount; timeoutMs: number; cfg: OpenClawConfig }): Promise<{ healthy: boolean; loggedIn: boolean; listening: boolean; instanceId?: string; error?: string }> {
       const state = accounts.get(account.accountId);
       if (!state || !state.bridge.connected) {
@@ -695,6 +714,22 @@ async function processMessage(
 
   // Track known senders for pairing
   if (msg.from) state.knownSenders.add(msg.from);
+
+  // Record inbound activity so the dashboard shows "Last inbound".
+  // Update the channel manager's runtime store directly (primary path) and
+  // also call the activity tracker (fallback path used by the status handler).
+  if (state.setStatus && state.getStatus) {
+    state.setStatus({ ...state.getStatus(), lastInboundAt: Date.now() });
+  }
+  try {
+    runtime.channel.activity.record({
+      channel: "garmin-messenger",
+      accountId,
+      direction: "inbound",
+    });
+  } catch {
+    // Activity tracker may not be available in all runtime contexts
+  }
 
   const hasText = !!msg.messageBody;
   const hasMedia = !!msg.mediaId;

@@ -11,7 +11,7 @@ const mockBridgeInstance = {
   connected: false,
   connect: vi.fn(async function () { mockBridgeInstance.connected = true; }),
   disconnect: vi.fn(async function () { mockBridgeInstance.connected = false; }),
-  getStatus: vi.fn(async () => ({ logged_in: true, listening: false })),
+  getStatus: vi.fn(async () => ({ logged_in: false, listening: false })),
   requestOtp: vi.fn(async () => ({
     isError: false,
     text: '{"request_id":"req-abc"}',
@@ -128,6 +128,25 @@ describe("garminOnboardingAdapter", () => {
   });
 
   describe("configure", () => {
+    it("skips OTP when already logged in", async () => {
+      mockBridgeInstance.getStatus.mockResolvedValueOnce({ logged_in: true, listening: false });
+
+      const prompter = makePrompter();
+      const result = await garminOnboardingAdapter.configure(makeConfigureCtx(prompter));
+
+      expect(result.cfg.channels?.["garmin-messenger"]?.enabled).toBe(true);
+      expect(result.cfg.channels?.["garmin-messenger"]?.sessionDir).toBeDefined();
+      expect(result.accountId).toBe("default");
+      expect(prompter.note).toHaveBeenCalledWith(
+        expect.stringContaining("already logged in"),
+        "Session Found",
+      );
+      // Should NOT have prompted for phone or done OTP
+      expect(prompter.text).not.toHaveBeenCalled();
+      expect(mockBridgeInstance.requestOtp).not.toHaveBeenCalled();
+      expect(mockBridgeInstance.confirmOtp).not.toHaveBeenCalled();
+    });
+
     it("happy path — completes OTP login and returns enabled config", async () => {
       const prompter = makePrompter({
         text: vi.fn()
