@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock binary resolution
 vi.mock("./binary.ts", () => ({
   resolveBinary: vi.fn(() => "/mock/garmin-messenger"),
+  ensureBinary: vi.fn(async () => "/mock/garmin-messenger"),
 }));
 
 // Mock MCPBridge
@@ -28,7 +29,7 @@ vi.mock("./mcp-bridge.ts", () => ({
 }));
 
 import { garminOnboardingAdapter } from "./onboarding.ts";
-import { resolveBinary } from "./binary.ts";
+import { resolveBinary, ensureBinary } from "./binary.ts";
 import type {
   WizardPrompter,
   ChannelOnboardingConfigureContext,
@@ -186,9 +187,7 @@ describe("garminOnboardingAdapter", () => {
     });
 
     it("returns unchanged config when binary not found", async () => {
-      vi.mocked(resolveBinary).mockImplementationOnce(() => {
-        throw new Error("not found");
-      });
+      vi.mocked(ensureBinary).mockRejectedValueOnce(new Error("not found"));
 
       const prompter = makePrompter();
       const originalCfg = { existing: true };

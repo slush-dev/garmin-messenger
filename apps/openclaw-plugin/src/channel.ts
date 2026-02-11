@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { MCPBridge } from "./mcp-bridge.js";
-import { resolveBinary } from "./binary.js";
+import { resolveBinary, ensureBinary } from "./binary.js";
 import { getGarminRuntime } from "./runtime.js";
 import { debugLog } from "./debug.js";
 import { garminOnboardingAdapter } from "./onboarding.js";
@@ -98,7 +98,7 @@ async function startAccountInner(ctx: ChannelGatewayContext<ResolvedGarminAccoun
     accounts.delete(accountId);
   }
 
-  const binaryPath = resolveBinary(account.config.binaryPath);
+  const binaryPath = await ensureBinary(account.config.binaryPath);
   debugLog(`resolved binary: ${binaryPath}`);
 
   const bridge = new MCPBridge({
@@ -582,7 +582,7 @@ export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayE
       try {
         const channelCfg = cfg.channels?.["garmin-messenger"] ?? {};
         const sessionDir = channelCfg.sessionDir ?? defaultSessionDir();
-        const binaryPath = resolveBinary(channelCfg.binaryPath);
+        const binaryPath = await ensureBinary(channelCfg.binaryPath);
 
         const bridge = new MCPBridge({
           binaryPath,

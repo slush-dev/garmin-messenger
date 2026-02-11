@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockResolveBinary = vi.fn(() => "/mock/garmin-messenger");
 vi.mock("./binary.ts", () => ({
   resolveBinary: (...args: any[]) => mockResolveBinary(...args),
+  ensureBinary: async (...args: any[]) => mockResolveBinary(...args),
 }));
 
 // Mock runtime module
