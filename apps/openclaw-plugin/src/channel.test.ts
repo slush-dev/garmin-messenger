@@ -41,7 +41,7 @@ vi.mock("./runtime.ts", () => ({
 // Mock MCPBridge
 vi.mock("./mcp-bridge.ts", () => {
   return {
-    MCPBridge: vi.fn().mockImplementation(() => ({
+    MCPBridge: vi.fn().mockImplementation(function () { return {
       connected: false,
       connect: vi.fn(async function (this: { connected: boolean }) {
         this.connected = true;
@@ -87,7 +87,7 @@ vi.mock("./mcp-bridge.ts", () => {
         addresses: { "user-1": "+15555550100" },
       })),
       subscribe: vi.fn(async () => {}),
-    })),
+    }; }),
   };
 });
 
@@ -394,7 +394,7 @@ describe("garminPlugin", () => {
       let capturedCallback: ((uri: string, meta?: Record<string, unknown>) => void) | undefined;
       let bridgeInstance: any;
 
-      MockBridge.mockImplementationOnce((opts: any) => {
+      MockBridge.mockImplementationOnce(function (opts: any) {
         capturedCallback = opts.onResourceUpdated;
         bridgeInstance = {
           connected: false,
@@ -891,7 +891,7 @@ describe("garminPlugin", () => {
     function mockNotLoggedIn() {
       const MockBridge = vi.mocked(MCPBridge);
       let bridge: any;
-      MockBridge.mockImplementationOnce(() => {
+      MockBridge.mockImplementationOnce(function () {
         bridge = {
           connected: false,
           connect: vi.fn(async function (this: { connected: boolean }) { this.connected = true; }),

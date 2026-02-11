@@ -25,7 +25,7 @@ const mockBridgeInstance = {
 };
 
 vi.mock("./mcp-bridge.ts", () => ({
-  MCPBridge: vi.fn(() => mockBridgeInstance),
+  MCPBridge: vi.fn(function () { return mockBridgeInstance; }),
 }));
 
 import { garminOnboardingAdapter } from "./onboarding.ts";
