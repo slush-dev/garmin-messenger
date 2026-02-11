@@ -187,15 +187,41 @@ describe("garminOnboardingAdapter", () => {
     });
 
     it("returns unchanged config when binary not found", async () => {
+      vi.mocked(resolveBinary).mockImplementationOnce(() => { throw new Error("not found"); });
       vi.mocked(ensureBinary).mockRejectedValueOnce(new Error("not found"));
 
-      const prompter = makePrompter();
+      const progressStop = vi.fn();
+      const prompter = makePrompter({
+        progress: vi.fn(() => ({ update: vi.fn(), stop: progressStop })),
+      });
       const originalCfg = { existing: true };
       const result = await garminOnboardingAdapter.configure(makeConfigureCtx(prompter, originalCfg));
 
       expect(result.cfg).toEqual(originalCfg);
       expect(result.accountId).toBeUndefined();
+      expect(prompter.progress).toHaveBeenCalledWith("Downloading garmin-messenger binary...");
+      expect(progressStop).toHaveBeenCalledWith("Failed");
       expect(prompter.note).toHaveBeenCalledWith(expect.stringContaining("binary not found"), "Missing Binary");
+    });
+
+    it("downloads binary with spinner when not bundled", async () => {
+      vi.mocked(resolveBinary).mockImplementationOnce(() => { throw new Error("not found"); });
+      vi.mocked(ensureBinary).mockResolvedValueOnce("/downloaded/garmin-messenger");
+
+      const progressStop = vi.fn();
+      const prompter = makePrompter({
+        progress: vi.fn(() => ({ update: vi.fn(), stop: progressStop })),
+        text: vi.fn()
+          .mockResolvedValueOnce("+15555550100")
+          .mockResolvedValueOnce("123456"),
+      });
+
+      const result = await garminOnboardingAdapter.configure(makeConfigureCtx(prompter));
+
+      expect(prompter.progress).toHaveBeenCalledWith("Downloading garmin-messenger binary...");
+      expect(progressStop).toHaveBeenCalledWith("Binary ready");
+      expect(result.cfg.channels?.["garmin-messenger"]?.enabled).toBe(true);
+      expect(result.accountId).toBe("default");
     });
 
     it("disconnects bridge even on error", async () => {

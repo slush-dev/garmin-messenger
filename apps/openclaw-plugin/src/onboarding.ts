@@ -78,11 +78,22 @@ export const garminOnboardingAdapter: ChannelOnboardingAdapter = {
   async configure(ctx: ChannelOnboardingConfigureContext): Promise<ChannelOnboardingResult> {
     const { cfg, prompter } = ctx;
 
-    // Resolve binary
+    // Resolve binary (fast path: already available; slow path: download with spinner)
     let binaryPath: string;
     try {
       const chCfg = cfg.channels?.[CHANNEL_ID] ?? {};
-      binaryPath = await ensureBinary(chCfg.binaryPath);
+      try {
+        binaryPath = resolveBinary(chCfg.binaryPath);
+      } catch {
+        const spinner = prompter.progress("Downloading garmin-messenger binary...");
+        try {
+          binaryPath = await ensureBinary(chCfg.binaryPath);
+          spinner.stop("Binary ready");
+        } catch (err) {
+          spinner.stop("Failed");
+          throw err;
+        }
+      }
     } catch {
       await prompter.note(
         "garmin-messenger binary not found.\n" +
