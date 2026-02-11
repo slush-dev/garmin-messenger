@@ -21,12 +21,16 @@ const mockGetChildLogger = vi.fn(() => ({
   error: vi.fn(),
 }));
 
+const mockRecordActivity = vi.fn();
 const mockPluginRuntime = {
   config: { loadConfig: mockLoadConfig },
   channel: {
     reply: {
       dispatchReplyWithBufferedBlockDispatcher: mockDispatch,
       finalizeInboundContext: mockFinalizeInboundContext,
+    },
+    activity: {
+      record: mockRecordActivity,
     },
   },
   logging: { getChildLogger: mockGetChildLogger },
@@ -123,7 +127,7 @@ function makeAccount(overrides: Partial<ResolvedGarminAccount> = {}): ResolvedGa
   };
 }
 
-function makeGatewayCtx(overrides: Partial<ChannelGatewayContext> = {}): ChannelGatewayContext {
+function makeGatewayCtx(overrides: Partial<ChannelGatewayContext> = {}): ChannelGatewayContext & { _controller: AbortController } {
   const controller = new AbortController();
   let status: ChannelAccountSnapshot = { accountId: DEFAULT_ACCOUNT_ID };
   return {
@@ -135,7 +139,26 @@ function makeGatewayCtx(overrides: Partial<ChannelGatewayContext> = {}): Channel
     log: mockLog,
     getStatus: () => status,
     setStatus: (next) => { status = next; },
+    _controller: controller,
     ...overrides,
+  } as ChannelGatewayContext & { _controller: AbortController };
+}
+
+/**
+ * Start account in background (startAccount now blocks until abort signal).
+ * Flushes microtasks so async setup completes, then returns a stop function.
+ */
+async function startAccountForTest(ctx?: ChannelGatewayContext & { _controller?: AbortController }) {
+  const gatewayCtx = ctx ?? makeGatewayCtx();
+  const task = garminPlugin.gateway!.startAccount!(gatewayCtx);
+  // Flush microtasks so all async setup in startAccountInner completes
+  await new Promise(r => setTimeout(r, 0));
+  return {
+    ctx: gatewayCtx,
+    stop: async () => {
+      (gatewayCtx as any)._controller?.abort();
+      await task;
+    },
   };
 }
 
@@ -294,8 +317,7 @@ describe("garminPlugin", () => {
 
   describe("gateway", () => {
     it("starts and stops an account", async () => {
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       // After starting, status should work
       const probeResult = await garminPlugin.status!.probeAccount!({
@@ -306,26 +328,24 @@ describe("garminPlugin", () => {
       expect((probeResult as any).loggedIn).toBe(true);
       expect((probeResult as any).instanceId).toBe("test-instance");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
   });
 
   describe("outbound", () => {
     it("sends a text message", async () => {
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const result = await garminPlugin.outbound!.sendText!(makeOutboundCtx());
       expect(result.channel).toBe("garmin-messenger");
       expect(result.messageId).toBe("msg-1");
       expect(result.chatId).toBe("conv-1");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("sends a media message", async () => {
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const result = await garminPlugin.outbound!.sendMedia!(
         makeOutboundCtx({ text: "Photo", mediaUrl: "/tmp/photo.jpg" }),
@@ -333,7 +353,7 @@ describe("garminPlugin", () => {
       expect(result.channel).toBe("garmin-messenger");
       expect(result.messageId).toBe("msg-2");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("throws for unknown account", async () => {
@@ -345,8 +365,7 @@ describe("garminPlugin", () => {
 
   describe("directory", () => {
     it("lists peers from contacts", async () => {
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const peers = await garminPlugin.directory!.listPeers!({ cfg: {}, accountId: DEFAULT_ACCOUNT_ID, runtime: { log: console.log, error: console.error, exit: process.exit } });
       expect(peers).toHaveLength(1);
@@ -355,7 +374,7 @@ describe("garminPlugin", () => {
       expect(peers[0].name).toBe("Alice");
       expect(peers[0].handle).toBe("+15555550100");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("returns empty for unknown account", async () => {
@@ -364,13 +383,12 @@ describe("garminPlugin", () => {
     });
 
     it("defaults accountId when not provided", async () => {
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const peers = await garminPlugin.directory!.listPeers!({ cfg: {}, runtime: { log: console.log, error: console.error, exit: process.exit } });
       expect(peers).toHaveLength(1);
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
   });
 
@@ -412,12 +430,12 @@ describe("garminPlugin", () => {
         return bridgeInstance;
       });
 
-      await garminPlugin.gateway!.startAccount!(makeGatewayCtx());
-      return { callback: capturedCallback!, bridge: bridgeInstance };
+      const { ctx, stop } = await startAccountForTest();
+      return { callback: capturedCallback!, bridge: bridgeInstance, stop, ctx };
     }
 
     it("processes text-only inbound message", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -448,12 +466,38 @@ describe("garminPlugin", () => {
       expect(bridge.downloadMedia).not.toHaveBeenCalled();
       // No resource fetch for embedded messages
       expect(bridge.readResourceJson).not.toHaveBeenCalled();
+      // Should record inbound activity for dashboard (both paths)
+      expect(mockRecordActivity).toHaveBeenCalledWith({
+        channel: "garmin-messenger",
+        accountId: "default",
+        direction: "inbound",
+      });
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
+    });
+
+    it("updates lastInboundAt on runtime status for inbound message", async () => {
+      const { callback, stop, ctx: gatewayCtx } = await startAndCapture();
+
+      const beforeStatus = gatewayCtx.getStatus();
+      expect(beforeStatus.lastInboundAt).toBeUndefined();
+
+      await callback("garmin://messages", {
+        type: "message",
+        conversation_id: "conv-1",
+        message: { messageId: "msg-ts", messageBody: "ping", from: "sender-1" },
+      });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const afterStatus = gatewayCtx.getStatus();
+      expect(afterStatus.lastInboundAt).toBeTypeOf("number");
+      expect(afterStatus.lastInboundAt).toBeGreaterThan(0);
+
+      await stop();
     });
 
     it("processes media-only inbound message (image)", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -475,11 +519,11 @@ describe("garminPlugin", () => {
         }),
       );
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("processes text + media inbound message", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -499,11 +543,11 @@ describe("garminPlugin", () => {
         }),
       );
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("uses transcription as body for audio without messageBody", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -521,11 +565,11 @@ describe("garminPlugin", () => {
         }),
       );
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("handles media download failure gracefully", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       bridge.downloadMedia.mockRejectedValueOnce(new Error("download failed"));
 
@@ -549,11 +593,11 @@ describe("garminPlugin", () => {
       const call = mockDispatch.mock.calls[0][0];
       expect(call.ctx.MediaPath).toBeUndefined();
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("filters out self-messages", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       // Self-message should be ignored
       await callback("garmin://messages", {
@@ -582,11 +626,11 @@ describe("garminPlugin", () => {
         }),
       );
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("deliver callback sends text via bridge", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       // Make dispatch call deliver with a text payload
       mockDispatch.mockImplementationOnce(async (params: any) => {
@@ -603,11 +647,11 @@ describe("garminPlugin", () => {
 
       expect(bridge.sendMessage).toHaveBeenCalledWith(["sender-1"], "Agent reply");
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("deliver callback sends media via bridge", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       mockDispatch.mockImplementationOnce(async (params: any) => {
         await params.dispatcherOptions.deliver({ mediaUrl: "/tmp/reply.jpg" }, { kind: "final" });
@@ -623,11 +667,11 @@ describe("garminPlugin", () => {
 
       expect(bridge.sendMediaMessage).toHaveBeenCalledWith(["sender-1"], "", "/tmp/reply.jpg");
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("appends metadata context to Body when rich fields present", async () => {
-      const { callback } = await startAndCapture();
+      const { callback, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -656,11 +700,11 @@ describe("garminPlugin", () => {
         fromDeviceType: "inReach",
       });
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("includes velocity and course in location when present", async () => {
-      const { callback } = await startAndCapture();
+      const { callback, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -684,11 +728,11 @@ describe("garminPlugin", () => {
       expect(ctx.Body).toContain("Message metadata:");
       expect(ctx.Body).toContain("Location: 50, 14, 300m, 1.5m/s, course 270°");
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("serializes referencePoint separately from userLocation", async () => {
-      const { callback } = await startAndCapture();
+      const { callback, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -706,11 +750,11 @@ describe("garminPlugin", () => {
       expect(ctx.Body).toContain("Message metadata:");
       expect(ctx.Body).toContain("Reference Point: 48.8566, 2.3522");
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("serializes mapShareUrl and mapSharePassword", async () => {
-      const { callback } = await startAndCapture();
+      const { callback, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -730,11 +774,11 @@ describe("garminPlugin", () => {
       expect(ctx.Body).toContain("Map Share: https://share.garmin.com/map456");
       expect(ctx.Body).toContain("Map Password: secret123");
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("does not append metadata context when no rich fields present", async () => {
-      const { callback } = await startAndCapture();
+      const { callback, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -749,11 +793,11 @@ describe("garminPlugin", () => {
       expect(ctx.Body).not.toContain("Message metadata:");
       expect(ctx.Metadata).toBeUndefined();
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("skips download for unsupported media type", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "message",
@@ -777,11 +821,11 @@ describe("garminPlugin", () => {
       expect(call.ctx.MediaPath).toBeUndefined();
       expect(call.ctx.MediaType).toBeUndefined();
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("ignores status_update notifications gracefully", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", {
         type: "status_update",
@@ -794,11 +838,11 @@ describe("garminPlugin", () => {
       expect(mockDispatch).not.toHaveBeenCalled();
       expect(bridge.readResourceJson).not.toHaveBeenCalled();
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
 
     it("ignores notifications without embedded message", async () => {
-      const { callback, bridge } = await startAndCapture();
+      const { callback, bridge, stop } = await startAndCapture();
 
       await callback("garmin://messages", { conversation_id: "conv-1" });
       await new Promise((r) => setTimeout(r, 10));
@@ -807,7 +851,7 @@ describe("garminPlugin", () => {
       expect(mockDispatch).not.toHaveBeenCalled();
       expect(bridge.readResourceJson).not.toHaveBeenCalled();
 
-      await garminPlugin.gateway!.stopAccount!(makeGatewayCtx());
+      await stop();
     });
   });
 
@@ -921,8 +965,7 @@ describe("garminPlugin", () => {
 
     it("loginWithOtpRequest returns OTP details", async () => {
       mockNotLoggedIn();
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const result = await garminPlugin.gateway!.loginWithOtpRequest!(DEFAULT_ACCOUNT_ID, "+15555550100");
       expect(result.ok).toBe(true);
@@ -930,18 +973,17 @@ describe("garminPlugin", () => {
       expect(result.attemptsRemaining).toBe(3);
       expect(result.validUntil).toBe("2026-02-08T12:00:00Z");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("loginWithOtpRequest passes deviceName when provided", async () => {
       const getBridge = mockNotLoggedIn();
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       await garminPlugin.gateway!.loginWithOtpRequest!(DEFAULT_ACCOUNT_ID, "+15555550100", "my-device");
       expect(getBridge().requestOtp).toHaveBeenCalledWith("+15555550100", "my-device");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("loginWithOtpRequest fails for unstarted account", async () => {
@@ -952,21 +994,19 @@ describe("garminPlugin", () => {
 
     it("loginWithOtpConfirm completes login and returns instanceId", async () => {
       mockNotLoggedIn();
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       const result = await garminPlugin.gateway!.loginWithOtpConfirm!(DEFAULT_ACCOUNT_ID, "+15555550100", "req-123", "123456");
       expect(result.ok).toBe(true);
       expect(result.instanceId).toBe("new-instance");
       expect(result.fcmStatus).toBe("FCM push notifications registered");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("loginWithOtpConfirm updates instanceId and starts listening", async () => {
       const getBridge = mockNotLoggedIn();
-      const ctx = makeGatewayCtx();
-      await garminPlugin.gateway!.startAccount!(ctx);
+      const { stop } = await startAccountForTest();
 
       await garminPlugin.gateway!.loginWithOtpConfirm!(DEFAULT_ACCOUNT_ID, "+15555550100", "req-123", "123456");
 
@@ -986,7 +1026,7 @@ describe("garminPlugin", () => {
       });
       expect((probeResult as any).instanceId).toBe("new-instance");
 
-      await garminPlugin.gateway!.stopAccount!(ctx);
+      await stop();
     });
 
     it("loginWithOtpConfirm fails for unstarted account", async () => {

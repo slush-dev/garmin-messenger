@@ -103,6 +103,27 @@ export const garminOnboardingAdapter: ChannelOnboardingAdapter = {
       return { cfg };
     }
 
+    // Check if already logged in — skip OTP if session is valid
+    const sessionDir = cfg.channels?.[CHANNEL_ID]?.sessionDir ?? defaultSessionDir();
+    const alreadyLoggedIn = await checkLoggedIn(binaryPath, sessionDir);
+    if (alreadyLoggedIn) {
+      await prompter.note("Existing Garmin Messenger session detected — already logged in.", "Session Found");
+
+      const newCfg: OpenClawConfig = {
+        ...cfg,
+        channels: {
+          ...cfg.channels,
+          [CHANNEL_ID]: {
+            ...cfg.channels?.[CHANNEL_ID],
+            enabled: true,
+            sessionDir,
+          },
+        },
+      };
+
+      return { cfg: newCfg, accountId: DEFAULT_ACCOUNT_ID };
+    }
+
     // Prompt for phone number
     const phone = await prompter.text({
       message: "Phone number for Garmin Messenger login (E.164 format, e.g. +15555550100):",
@@ -114,8 +135,6 @@ export const garminOnboardingAdapter: ChannelOnboardingAdapter = {
         return undefined;
       },
     });
-
-    const sessionDir = cfg.channels?.[CHANNEL_ID]?.sessionDir ?? defaultSessionDir();
 
     // Create temporary bridge for OTP flow
     const bridge = new MCPBridge({
