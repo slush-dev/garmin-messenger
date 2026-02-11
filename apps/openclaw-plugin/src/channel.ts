@@ -302,29 +302,17 @@ export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayE
 
     describeAccount(account: ResolvedGarminAccount, _cfg: OpenClawConfig): ChannelAccountSnapshot {
       const state = accounts.get(account.accountId);
-      let configured = false;
-      try {
-        resolveBinary(account.config.binaryPath);
-        configured = true;
-      } catch {}
       return {
         accountId: account.accountId,
         enabled: account.enabled,
-        configured,
+        configured: account.enabled,
         running: state?.bridge.connected ?? false,
         connected: state?.bridge.connected ?? false,
       };
     },
 
     isConfigured(account: ResolvedGarminAccount): boolean {
-      // Garmin Messenger needs a binary and saved session — we can't check the
-      // session from here, so just verify the binary is locatable.
-      try {
-        resolveBinary(account.config.binaryPath);
-        return true;
-      } catch {
-        return false;
-      }
+      return account.enabled;
     },
   },
 
