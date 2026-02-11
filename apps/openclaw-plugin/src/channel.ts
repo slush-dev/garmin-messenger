@@ -39,7 +39,7 @@ interface AccountState {
 }
 
 // Use Symbol.for so state is shared even if module is loaded multiple times (e.g. by jiti)
-const ACCOUNTS_KEY = Symbol.for("openclaw-garmin-messenger-accounts");
+const ACCOUNTS_KEY = Symbol.for("garmin-messenger-accounts");
 const accounts: Map<string, AccountState> =
   (globalThis as any)[ACCOUNTS_KEY] ??= new Map<string, AccountState>();
 
@@ -197,10 +197,10 @@ type GarminGatewayExtensions = {
 };
 
 export const garminPlugin: ChannelPlugin<ResolvedGarminAccount> & GarminGatewayExtensions = {
-  id: "openclaw-garmin-messenger",
+  id: "garmin-messenger",
 
   meta: {
-    id: "openclaw-garmin-messenger",
+    id: "garmin-messenger",
     label: "Garmin Messenger",
     selectionLabel: "Garmin Messenger",
     docsPath: "/channels/garmin-messenger",

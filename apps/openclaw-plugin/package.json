@@ -1,5 +1,5 @@
 {
-  "name": "@slush-dev/openclaw-garmin-messenger",
+  "name": "@slush-openclaw/garmin-messenger",
   "version": "1.1.0",
   "description": "OpenClaw channel plugin for Garmin Messenger (Hermes)",
   "repository": {

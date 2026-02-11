@@ -101,5 +101,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          mv apps/openclaw-plugin/*.tgz openclaw-garmin-messenger.tgz
-          gh release upload "$TAG_NAME" openclaw-garmin-messenger.tgz
+          mv apps/openclaw-plugin/*.tgz garmin-messenger-openclaw-plugin.tgz
+          gh release upload "$TAG_NAME" garmin-messenger-openclaw-plugin.tgz

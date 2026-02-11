@@ -169,11 +169,11 @@ describe("garminPlugin", () => {
   });
 
   it("has correct id", () => {
-    expect(garminPlugin.id).toBe("openclaw-garmin-messenger");
+    expect(garminPlugin.id).toBe("garmin-messenger");
   });
 
   it("has required meta fields", () => {
-    expect(garminPlugin.meta.id).toBe("openclaw-garmin-messenger");
+    expect(garminPlugin.meta.id).toBe("garmin-messenger");
     expect(garminPlugin.meta.label).toBe("Garmin Messenger");
     expect(garminPlugin.meta.selectionLabel).toBe("Garmin Messenger");
     expect(garminPlugin.meta.docsPath).toBe("/channels/garmin-messenger");
